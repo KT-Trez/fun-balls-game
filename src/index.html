@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pl-PL" dir="ltr">
+
+<head>
+
+  <meta charset="utf-8">
+  <title><%= htmlWebpackPlugin.options.title %></title>
+
+</head>
+
+<body>
+
+  <div>
+    <label for="js-board__x">x</label>
+    <input id="js-board__x" type="number" value="10">
+    <label for="js-board__y">y</label>
+    <input id="js-board__y" type="number" value="10">
+
+    <label for="js-board__obstacles">Przeszkody</label>
+    <input id="js-board__obstacles" type="number" value="3">
+    <button id="js-board__generate" type="button">Generuj</button>
+  </div>
+
+  <div id="js-display"></div>
+
+</body>
+
+</html>

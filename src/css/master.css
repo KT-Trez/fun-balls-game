@@ -1,0 +1,23 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  background-color: white;
+}
+
+.board {}
+
+.board__cell {
+  height: 40px;
+  width: 40px;
+  border: 1px solid gray;
+}
