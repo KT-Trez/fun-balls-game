@@ -10,14 +10,11 @@ window.addEventListener('DOMContentLoaded', () => {
   let obstacles = document.getElementById('js-board__obstacles') as HTMLInputElement;
 
   let generate = document.getElementById('js-board__generate') as HTMLButtonElement;
-  generate.addEventListener('click', () => {
+  generate.addEventListener('click', () => { // TODO: start game
     let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value), parseInt(obstacles.value));
 
-    let boardDOM: HTMLTableElement = board.generateDOMTable();
-    board.appendAndAppendDisplay(boardDOM);
-
-
+    let boardDOM: HTMLTableElement = board.renderBoardDOM();
+    board.clearAndAppendDisplay(boardDOM);
+    board.renderObstaclesDOM();
   });
-  // todo: game starts
-
 });

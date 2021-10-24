@@ -3,7 +3,7 @@
     "name": "Bartlomiej 'Trez' Was",
     "email": "batoko.was@10g.pl"
   },
-  "description": "Fun and interactive The Great Balls Game.",
+  "description": "Fun and interactive - The Great Balls Game.",
   "devDependencies": {
     "css-loader": "^6.4.0",
     "html-webpack-plugin": "^5.4.0",

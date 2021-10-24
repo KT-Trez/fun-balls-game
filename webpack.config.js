@@ -27,6 +27,7 @@ module.exports = {
     },
     output: {
         clean: true,
+        hashFunction: "sha256",
         path: path.join(__dirname, './build'),
         filename: '[name].bundle.js'
     },
