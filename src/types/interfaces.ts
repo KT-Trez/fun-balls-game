@@ -1,3 +1,5 @@
+import Board from '../classes/Board';
+
 /**
  * Tile used in boardProcessArr array.
  * @extends Coordinates
@@ -14,12 +16,26 @@ export interface BoardProcessTile extends Coordinates {
 }
 
 /** Game board dimensions */
-export interface BoardSize {
-    /** Board height */
+export interface BoardData {
+    /** Board height. */
     height: number;
 
-    /** Board width */
+    /** Board instance. */
+    instance?: Board;
+
+    /** Board width. */
     width: number;
+}
+
+/**
+ * Tile used in BoardMap
+ * @extends Coordinates
+ */
+export interface BoardTile extends Coordinates {
+    /** Tile's color. */
+    color: string | null;
+    /** Tile's type. */
+    type: string;
 }
 
 /** Coordinates of a tile */
@@ -31,5 +47,15 @@ export interface Coordinates {
     y: number | null;
 }
 
-/** BoardProcess Array. */
-export type BoardProcess = Array<Array<BoardProcessTile>>;
+export interface EndPoints {
+    /** Ending point of path. */
+    finish: Coordinates;
+    /** Starting point of path. */
+    start: Coordinates;
+}
+
+/** BoardMap's array. */
+export type BoardMap = BoardTile[][];
+
+/** BoardProcess's array. */
+export type BoardProcess = BoardProcessTile[][];

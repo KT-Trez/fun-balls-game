@@ -1,8 +1,10 @@
-console.log('Loaded: Board.ts');
-import { BoardTilesTypes } from '../types/consts';
-import { Coordinates} from '../types/interfaces';
+import { BoardTile, Coordinates, EndPoints } from '../types/interfaces';
+import { BoardTilesColors, BoardTilesTypes } from '../types/consts';
 import Pathfinder from './Pathfinder';
+import Renderer from './Renderer';
 import Tools from '../components/Tools';
+
+console.log('Loaded: Board.ts');
 
 
 /**
@@ -14,21 +16,21 @@ export default class Board {
   /** Board width. */
   private readonly width: number;
 
-  /** Map of board tiles types. */
-  private readonly boardMap: string[][];
-  /** Obstacles count. */
-  private readonly obstacles: number;
-  // /** Points, such as start and finish count */
-  // private points: number; // TODO: Deprecated: delete
+  /** Map of board tiles. */
+  private readonly boardMap: BoardTile[][];
 
   /** Board's pathfinder. */
-  private pathfinder: Pathfinder;
+  pathfinder: Pathfinder;
+  /** Board's renderer. */
+  private readonly renderer: Renderer;
 
   /** Is finish point placed. */
   private hasFinish: boolean;
   /** Is start point placed. */
   private hasStart: boolean;
 
+  /** Finish point coordinates. */
+  private finish: Coordinates;
   /** Start point coordinates. */
   private start: Coordinates;
 
@@ -36,137 +38,106 @@ export default class Board {
    * Creates basic board data.
    * @param height - board height.
    * @param width - board width.
-   * @param obstacles - obstacles count.
    */
-  constructor(height: number, width: number, obstacles: number) {
+  constructor(height: number, width: number) {
     this.height = height;
     this.width = width;
 
-    this.obstacles = obstacles;
-    // this.points = 2; // TODO: Deprecated: delete
-
     this.boardMap = [];
     for (let i: number = 0; i < this.height; i++) {
-      let row: string[] = []
+      let row = [];
       for (let j: number = 0; j < this.width; j++)
-        row.push(BoardTilesTypes.none);
+        row.push({
+          color: null,
+          type: BoardTilesTypes.none,
+          x: j,
+          y: i
+        });
 
       this.boardMap.push(row);
     }
 
-    // lays out obstacles on the board
-    while (this.obstacles) {
-      let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
-      let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
-
-      if (this.boardMap[randomX][randomY] === BoardTilesTypes.none) {
-        this.boardMap[randomX][randomY] = BoardTilesTypes.obstacle;
-        this.obstacles--;
-      }
-    }
-
-    // while (this.points) { // TODO: Deprecated: delete
-    //   let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
-    //   let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
-    //
-    //   if (this.points == 2) {
-    //     this.boardMap[randomX][randomY] = 's';
-    //     this.points--;
-    //   } else if (this.points == 1) {
-    //     this.boardMap[randomX][randomY] = 'e';
-    //     this.points--;
-    //   }
-    // }
-
     this.hasFinish = false;
     this.hasStart = false;
+
+    this.finish = {
+      x: null,
+      y: null
+    };
 
     this.start = {
       x: null,
       y: null
     };
+
+    this.pathfinder = new Pathfinder(this.height, this.width);
+    this.renderer = new Renderer(this, this.height, this.width);
   }
 
   /**
-   * Clears div with id 'js-display', and appends new content.
-   * @param element - element that will be appended.
+   * Generates obstacles on the board.
+   * @private
+   * @param obstaclesCount - obstacles quantity.
    */
-  clearAndAppendDisplay(element: HTMLElement): void {
-    let display = document.getElementById('js-display') as HTMLDivElement;
+  private generateObstacles(obstaclesCount: number): void {
+    while (obstaclesCount) {
+      let randomColor: string = BoardTilesColors[Tools.getRandomIntInclusive(0, BoardTilesColors.length)].id;
+      let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
+      let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
 
-    while (display.firstChild)
-      display.removeChild(display.firstChild);
-
-    display.appendChild(element);
-  }
-
-  /**
-   * Generates new DOM board with class instance's height and width.
-   */
-  renderBoardDOM(): HTMLTableElement {
-    let table: HTMLTableElement = document.createElement('table');
-
-    for (let i: number = 0; i < this.height; i++) {
-      let row: HTMLTableRowElement = document.createElement('tr');
-
-      for (let j: number = 0; j < this.width; j++) {
-        let cell: HTMLTableCellElement = document.createElement('td');
-
-        cell.classList.add('board__cell');
-        cell.setAttribute('data-x', j.toString());
-        cell.setAttribute('data-y', i.toString());
-        this.setTileEvents(cell);
-
-        row.appendChild(cell);
+      if (this.boardMap[randomX][randomY].type === BoardTilesTypes.none) {
+        Object.assign(this.boardMap[randomX][randomY], {
+          color: randomColor,
+          type: BoardTilesTypes.obstacle
+        });
+        obstaclesCount--;
       }
-      table.appendChild(row);
     }
-
-    return table;
   }
 
   /**
-   * Renders obstacles on the DOM board.
+   * Returns board tile from BoardMap.
+   * @param x - horizontal coordinate of tile.
+   * @param y - vertical coordinate of tile.
+   * @return boardTile - board tile.
    */
-  renderObstaclesDOM(): void {
-    for (let i = 0; i < this.boardMap.length; i++)
-      for (let j = 0; j < this.boardMap[i].length; j++)
-        if (this.boardMap[i][j] === BoardTilesTypes.obstacle)
-          document.querySelector(`[data-x="${j}"][data-y="${i}"]`).classList.add('obstacle');
+  getBoardMapTile(x: number, y: number): BoardTile {
+    return this.boardMap[y][x];
   }
 
   /**
-   * Sets all events (mostly onclick) for board tile.
-   * @param tile - board tile.
+   * Gets the path, from pathfinder, between two points.
+   * @param endpoints - start and end points of path.
    */
-  setTileEvents(tile: HTMLTableCellElement): void {
-    tile.onclick = () => {
-      if (!this.hasStart) {
-        tile.classList.add('start'); // TODO: dev only, delete later
+  getPath(endpoints: EndPoints): Coordinates[] {
+    if (this.boardMap[endpoints.finish.y][endpoints.finish.x].type === BoardTilesTypes.obstacle)
+      return [];
 
-        this.start = {
-          x: parseInt(tile.dataset.x),
-          y: parseInt(tile.dataset.y)
-        };
-        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = BoardTilesTypes.start;
-        this.hasStart = true;
-      } else if (!this.hasFinish) {
-        tile.classList.add('finish'); // TODO: dev only, delete later
+    let deepCopyBoardMap = JSON.parse(JSON.stringify(this.boardMap));
 
-        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = BoardTilesTypes.finish;
+    deepCopyBoardMap[endpoints.finish.y][endpoints.finish.x].type = BoardTilesTypes.finish;
+    deepCopyBoardMap[endpoints.start.y][endpoints.start.x].type = BoardTilesTypes.start;
 
-        // find shortest path between start and and
-        this.pathfinder = new Pathfinder(this.height, this.width);
-
-        let path = this.pathfinder.findPath(this.boardMap); // TODO: dev only, delete later
-        for (let i = 0; i < path.length; i++) {
-          let pathTile = document.querySelector(`[data-x="${path[i].x}"][data-y="${path[i].y}"]`);
-          pathTile.classList.add('path');
-        }
-
-        this.hasFinish = true;
-      }
-    };
+    return this.pathfinder.findPath(deepCopyBoardMap);
   }
 
+  /**
+   * Moves ball between two points.
+   * @param endpoints - points from and to which ball will be moved.
+   */
+  moveBall(endpoints: EndPoints): void {
+    console.log('Moving ball.', endpoints);
+  }
+
+  /**
+   * Starts and handles game progress.
+   * @param initialObstaclesCount - initial obstacle quantity.
+   */
+  startGame(initialObstaclesCount: number): void {
+    this.generateObstacles(initialObstaclesCount);
+    this.renderer.renderBoardDOM();
+    this.renderer.renderObstaclesDOM(this.boardMap);
+
+    // todo: game progress
+  }
 }

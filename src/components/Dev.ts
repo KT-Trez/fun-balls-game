@@ -1,5 +1,5 @@
-import {BoardProcessTile} from '../types/interfaces';
-
+import Board from '../classes/Board';
+import { BoardProcessTile } from '../types/interfaces';
 
 /**
  * Debugging class.
@@ -65,4 +65,28 @@ export default class Dev {
         break;
     }
   }
+
+  /**
+   * Enables custom input for board height, width and obstacles count.
+   */
+  static runCustomInput() {
+    document.getElementById('js-custom-input').classList.remove('js-hide');
+
+    let boardX = document.getElementById('js-board__x') as HTMLInputElement;
+    let boardY = document.getElementById('js-board__y') as HTMLInputElement;
+    let obstaclesCount = document.getElementById('js-board__obstacles') as HTMLInputElement;
+
+    document.getElementById('js-board__generate').onclick = () => {
+      if (parseInt(boardX.value) < 5 && parseInt(boardY.value) < 5)
+        alert('Board to small.');
+
+      if (parseInt(boardX.value) * parseInt(boardY.value) < parseInt(obstaclesCount.value) - 3)
+        alert('Too many obstacles.');
+
+      let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value));
+      board.startGame(parseInt(obstaclesCount.value));
+    };
+  }
 }
+
+globalThis.dev = Dev;

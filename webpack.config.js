@@ -4,9 +4,6 @@ const path = require('path');
 
 module.exports = {
     devServer: {
-        client: {
-            progress: true
-        },
         liveReload: true,
         port: 3000,
         static: {
@@ -15,7 +12,8 @@ module.exports = {
     },
     devtool: 'source-map',
     entry: {
-        app: './src/app.ts'
+        app: './src/app.ts',
+        // dev: './src/components/Dev.ts' // load dev module
     },
     mode: 'development',
     module: {

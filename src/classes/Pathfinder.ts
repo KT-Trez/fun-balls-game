@@ -1,5 +1,6 @@
+import { BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap } from '../types/interfaces';
+
 console.log('Loaded: Pathfinder.ts');
-import { BoardProcess, BoardProcessTile, BoardSize, Coordinates } from '../types/interfaces';
 
 
 /**
@@ -7,7 +8,7 @@ import { BoardProcess, BoardProcessTile, BoardSize, Coordinates } from '../types
  */
 export default class Pathfinder {
     /** Board height and width. */
-    private readonly board: BoardSize;
+    private readonly board: BoardData;
     /** Array with offset data. Useful while searching tiles around a selected tile. */
     private readonly searchOffsetArr: Array<Coordinates>;
 
@@ -87,7 +88,7 @@ export default class Pathfinder {
      * @return shortestPath - array with shortest path.
      */
     private reverseSearch(boardProcess: BoardProcess): Array<Coordinates> {
-        let pathArr: Array<Coordinates> = [];
+        let pathArr: Array<Coordinates> = [this.finish];
 
         // check if start is next to finish
         if (this.checkIfEndPointsAreNeighbors(boardProcess))
@@ -138,7 +139,7 @@ export default class Pathfinder {
      * @param board - board array.
      * @return shortestPath - array with shortest path.
      */
-    findPath(board: Array<Array<string>>): Array<Coordinates> {
+    findPath(board: BoardMap): Array<Coordinates> {
         // create new array of boardProcess objects - coordinates and other tile data (BoardProcessTile)
         let boardProcess: BoardProcess = [];
         for (let i = 0; i < this.board.height; i++) {
@@ -150,7 +151,7 @@ export default class Pathfinder {
                     y: i,
                     wasSearched: false
                 });
-                switch (board[i][j]) {
+                switch (board[i][j].type) {
                     case '0':
                         boardProcess[i][j].type = '0';
                         break;

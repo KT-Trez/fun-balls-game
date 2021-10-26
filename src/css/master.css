@@ -1,3 +1,4 @@
+/* required */
 * {
   margin: 0;
   padding: 0;
@@ -14,7 +15,10 @@ body {
   background-color: white;
 }
 
-.board {}
+/* board */
+.board {
+  border-collapse: collapse;
+}
 
 .board__cell {
   height: 40px;
@@ -22,23 +26,53 @@ body {
   border: 1px solid gray;
 }
 
-.obstacle {
-  background-color: #333;
+/* balls */
+.ball {
+  height: 30px;
+  width: 30px;
+  border: 1px solid lightgray;
+  border-radius: 30px;
+  margin: auto;
 }
 
-.path {
-  background-color: darkred;
+.ball--path {
+  background-color: lightpink;
 }
 
+.ball--selected {
+  height: 35px;
+  width: 35px;
+}
+
+.ball-color--r {
+  background-color: #FF1717;
+}
+
+.ball-color--o {
+  background-color: #FF7F13;
+}
+
+.ball-color--y {
+  background-color: #FAFF31;
+}
+
+.ball-color--g {
+  background-color: #6EFF27;
+}
+
+.ball-color--c {
+  background-color: #41FFDA;
+}
+
+.ball-color--b {
+ background-color: #1450FF;
+}
+
+.ball-color--v {
+  background-color: #A10AFF;
+}
+
+/* additional features */
 .js-hide {
   display: none;
-}
-
-/* TODO: dev only, delete later */
-.finish {
-  background-color: aqua;
-}
-
-.start {
-  background-color: green;
 }
