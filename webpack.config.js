@@ -3,10 +3,21 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 
 module.exports = {
+    devServer: {
+        client: {
+            progress: true
+        },
+        liveReload: true,
+        port: 3000,
+        static: {
+            directory: path.join(__dirname, 'build')
+        }
+    },
     devtool: 'source-map',
     entry: {
         app: './src/app.ts'
     },
+    mode: 'development',
     module: {
         rules: [
             {

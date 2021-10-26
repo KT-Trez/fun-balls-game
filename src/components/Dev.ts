@@ -1,10 +1,5 @@
-interface BoardProcessTile {
-  x: number;
-  y: number;
-  pathHelper?: number;
-  type?: string;
-  wasSearched: boolean;
-}
+import {BoardProcessTile} from '../types/interfaces';
+
 
 /**
  * Debugging class.
@@ -13,9 +8,9 @@ export default class Dev {
   /**
    * Stretches text length with spaces.
    * @private
-   * @param {string} text - text that will be stretched.
-   * @param {number} length - length to which text will be stretched.
-   * @return {string} formatted text.
+   * @param text - text that will be stretched.
+   * @param length - length to which text will be stretched.
+   * @return formattedText - formatted text.
    */
   private static fixLength(text: string, length: number): string {
     if (text.length === length) {
@@ -28,8 +23,8 @@ export default class Dev {
 
   /**
    * Logs boardProcess's data.
-   * @param {Array<Array<BoardProcessTile>>} dataArray - boardProcess array.
-   * @param {'pathHelper' | 'xy' | 'type', 'wasSearched'} type - type of data that should be logged.
+   * @param dataArray - boardProcess array.
+   * @param type - type of data that should be logged.
    */
   static logBoardProcess(dataArray: Array<Array<BoardProcessTile>>, type: 'pathHelper' | 'xy'| 'type' | 'wasSearched'):void {
     let resultString = '';
@@ -68,7 +63,6 @@ export default class Dev {
           resultString += '\n';
         console.log(resultString);
         break;
-
     }
   }
 }

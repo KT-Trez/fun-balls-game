@@ -30,8 +30,12 @@ body {
   background-color: darkred;
 }
 
+.js-hide {
+  display: none;
+}
+
 /* TODO: dev only, delete later */
-.end {
+.finish {
   background-color: aqua;
 }
 

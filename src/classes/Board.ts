@@ -1,36 +1,42 @@
 console.log('Loaded: Board.ts');
+import { BoardTilesTypes } from '../types/consts';
+import { Coordinates} from '../types/interfaces';
 import Pathfinder from './Pathfinder';
 import Tools from '../components/Tools';
-
-interface Coordinates {
-  x: number | null;
-  y: number | null;
-}
 
 
 /**
  * Class to create and manage game's board.
  */
 export default class Board {
-  private readonly boardMap: string[][];
-  private readonly obstacles: number;
-  private pathfinder: Pathfinder;
-  // private points: number; // TODO: Deprecated: delete
-
+  /** Board height. */
   private readonly height: number;
+  /** Board width. */
   private readonly width: number;
 
-  private start: Coordinates;
+  /** Map of board tiles types. */
+  private readonly boardMap: string[][];
+  /** Obstacles count. */
+  private readonly obstacles: number;
+  // /** Points, such as start and finish count */
+  // private points: number; // TODO: Deprecated: delete
 
-  private hasEnd: boolean;
+  /** Board's pathfinder. */
+  private pathfinder: Pathfinder;
+
+  /** Is finish point placed. */
+  private hasFinish: boolean;
+  /** Is start point placed. */
   private hasStart: boolean;
+
+  /** Start point coordinates. */
+  private start: Coordinates;
 
   /**
    * Creates basic board data.
-   * @param {number} height - board height.
-   * @param {number} width - board width.
-   * @param {number} obstacles - obstacles count.
-   * @return {Object} - board data.
+   * @param height - board height.
+   * @param width - board width.
+   * @param obstacles - obstacles count.
    */
   constructor(height: number, width: number, obstacles: number) {
     this.height = height;
@@ -43,7 +49,7 @@ export default class Board {
     for (let i: number = 0; i < this.height; i++) {
       let row: string[] = []
       for (let j: number = 0; j < this.width; j++)
-        row.push('0');
+        row.push(BoardTilesTypes.none);
 
       this.boardMap.push(row);
     }
@@ -53,8 +59,8 @@ export default class Board {
       let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
       let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
 
-      if (this.boardMap[randomX][randomY] === '0') {
-        this.boardMap[randomX][randomY] = 'x';
+      if (this.boardMap[randomX][randomY] === BoardTilesTypes.none) {
+        this.boardMap[randomX][randomY] = BoardTilesTypes.obstacle;
         this.obstacles--;
       }
     }
@@ -72,7 +78,7 @@ export default class Board {
     //   }
     // }
 
-    this.hasEnd = false;
+    this.hasFinish = false;
     this.hasStart = false;
 
     this.start = {
@@ -83,7 +89,7 @@ export default class Board {
 
   /**
    * Clears div with id 'js-display', and appends new content.
-   * @param {HTMLElement} element - element that will be appended.
+   * @param element - element that will be appended.
    */
   clearAndAppendDisplay(element: HTMLElement): void {
     let display = document.getElementById('js-display') as HTMLDivElement;
@@ -125,13 +131,13 @@ export default class Board {
   renderObstaclesDOM(): void {
     for (let i = 0; i < this.boardMap.length; i++)
       for (let j = 0; j < this.boardMap[i].length; j++)
-        if (this.boardMap[i][j] === 'x')
+        if (this.boardMap[i][j] === BoardTilesTypes.obstacle)
           document.querySelector(`[data-x="${j}"][data-y="${i}"]`).classList.add('obstacle');
   }
 
   /**
    * Sets all events (mostly onclick) for board tile.
-   * @param {HTMLTableCellElement} tile - board tile.
+   * @param tile - board tile.
    */
   setTileEvents(tile: HTMLTableCellElement): void {
     tile.onclick = () => {
@@ -142,12 +148,12 @@ export default class Board {
           x: parseInt(tile.dataset.x),
           y: parseInt(tile.dataset.y)
         };
-        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = 's';
+        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = BoardTilesTypes.start;
         this.hasStart = true;
-      } else if (!this.hasEnd) {
-        tile.classList.add('end'); // TODO: dev only, delete later
+      } else if (!this.hasFinish) {
+        tile.classList.add('finish'); // TODO: dev only, delete later
 
-        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = 'e';
+        this.boardMap[parseInt(tile.dataset.y)][parseInt(tile.dataset.x)] = BoardTilesTypes.finish;
 
         // find shortest path between start and and
         this.pathfinder = new Pathfinder(this.height, this.width);
@@ -158,8 +164,9 @@ export default class Board {
           pathTile.classList.add('path');
         }
 
-        this.hasEnd = true;
+        this.hasFinish = true;
       }
     };
   }
+
 }
