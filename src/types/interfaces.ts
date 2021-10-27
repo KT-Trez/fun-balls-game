@@ -1,7 +1,7 @@
 import Board from '../classes/Board';
 
 /**
- * Tile used in boardProcessArr array.
+ * Tile used in board process
  * @extends Coordinates
  */
 export interface BoardProcessTile extends Coordinates {
@@ -15,7 +15,7 @@ export interface BoardProcessTile extends Coordinates {
     wasSearched: boolean;
 }
 
-/** Game board dimensions */
+/** Game board data */
 export interface BoardData {
     /** Board height. */
     height: number;
@@ -28,10 +28,17 @@ export interface BoardData {
 }
 
 /**
+ * Data of tile used in BoardMap.
+ * This is the same as BoardMapTile, but doesn't directly reference BoardMap as it's purpose is to model new tiles
+ * @extends BoardMapTile
+ */
+export interface BoardMapTileData extends BoardMapTile {}
+
+/**
  * Tile used in BoardMap
  * @extends Coordinates
  */
-export interface BoardTile extends Coordinates {
+export interface BoardMapTile extends Coordinates {
     /** Tile's color. */
     color: string | null;
     /** Tile's type. */
@@ -55,7 +62,7 @@ export interface EndPoints {
 }
 
 /** BoardMap's array. */
-export type BoardMap = BoardTile[][];
+export type BoardMap = BoardMapTile[][];
 
 /** BoardProcess's array. */
 export type BoardProcess = BoardProcessTile[][];

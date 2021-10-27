@@ -1,5 +1,6 @@
+import { BallsDeletedEvent, BallsGeneratedEvent } from '../types/events';
 import Board from './Board';
-import { BoardData, Coordinates, EndPoints, BoardTile } from '../types/interfaces';
+import { BoardData, Coordinates, EndPoints, BoardMapTile } from '../types/interfaces';
 import { BoardTilesTypes } from '../types/consts';
 
 console.log('Loaded: Renderer.ts');
@@ -17,10 +18,13 @@ export default class Renderer {
     /** Selected start tile. */
     private selectedStart: HTMLTableCellElement | null;
 
+    /** If balls have been killed, there is a list of them to un-render. */
+    private ballsToUnRender: BoardMapTile[];
     /** Data about start and finish points. */
     private readonly endPoints: EndPoints;
     /** Last path that was rendered on the board. */
     private lastRenderedPath: Coordinates[];
+
 
     /**
      * Creates new renderer for board.
@@ -43,20 +47,29 @@ export default class Renderer {
             start: null
         };
 
+        this.ballsToUnRender = [];
         this.lastRenderedPath = [];
     }
 
     /**
      * Clears div with id 'js-display', and appends new content.
+     * @private
+     * @static
      * @param element - element that will be appended.
      */
-    clearAndAppendDisplay(element: HTMLElement): void {
+    private static clearAndAppendDisplay(element: HTMLElement): void {
         let display = document.getElementById('js-display') as HTMLDivElement;
-
         while (display.firstChild)
             display.removeChild(display.firstChild);
-
         display.appendChild(element);
+    }
+
+    private clearDeletedBalls() {
+        for (let i = 0; i < this.ballsToUnRender.length; i++) {
+            let ball = this.ballsToUnRender[i];
+            document.querySelector(`[data-x="${ball.x}"][data-y="${ball.y}"]`).firstChild.remove();
+        }
+        this.ballsToUnRender = [];
     }
 
     /**
@@ -95,13 +108,13 @@ export default class Renderer {
             boardDOM.appendChild(row);
         }
 
-        this.clearAndAppendDisplay(boardDOM);
+        Renderer.clearAndAppendDisplay(boardDOM);
     }
 
     /**
      * Renders balls on the DOM board.
      */
-    renderBallsDOM(obstaclesArr: BoardTile[]): void {
+    renderBallsDOM(obstaclesArr: BoardMapTile[]): void {
         for (let i = 0; i < obstaclesArr.length; i++) {
             let ballData = obstaclesArr[i];
             let ball = document.createElement('div');
@@ -137,6 +150,19 @@ export default class Renderer {
     }
 
     /**
+     * Sets renders for board events.
+     */
+    setRenderForBoardEvents(): void {
+        this.board.instance.eventInterface.addEventListener('deletedBalls', (event: BallsDeletedEvent) => {
+            this.ballsToUnRender = event.detail.balls;
+            let pointsCountDOM = document.getElementById('js-points-count');
+            pointsCountDOM.innerText = (parseInt(pointsCountDOM.innerText) + event.detail.points).toString();
+        });
+
+        this.board.instance.eventInterface.addEventListener('ballsGenerated', (event: BallsGeneratedEvent) => this.renderBallsDOM(event.detail));
+    }
+
+    /**
      * Sets all events for board tile.
      * @private
      * @param tile - board tile to set events for.
@@ -156,7 +182,17 @@ export default class Renderer {
 
                 this.selectedStart = tile;
                 tile.children[0].classList.add('ball--selected');
-            } else if (this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
+            } else if (this.selectedStart === tile) {
+                Object.assign(this.endPoints, {
+                    start: null,
+                    end: null
+                });
+
+                this.renderPathFlag = false;
+
+                this.selectedStart.children[0].classList.remove('ball--selected');
+                this.selectedStart = null;
+            } else if(this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
                 this.endPoints.start = {
                     x: parseInt(tile.dataset.x),
                     y: parseInt(tile.dataset.y)
@@ -186,6 +222,9 @@ export default class Renderer {
 
                     this.selectedStart = null;
                     this.clearLastRenderedPath();
+
+                    if (this.ballsToUnRender.length > 0)
+                        this.clearDeletedBalls();
                 }
             }
         };

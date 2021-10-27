@@ -1,4 +1,5 @@
-import { BoardTile, Coordinates, EndPoints } from '../types/interfaces';
+import { BallsDeletedEvent, BallsGeneratedEvent } from '../types/events';
+import { BoardMapTile, BoardMapTileData, Coordinates, EndPoints } from '../types/interfaces';
 import { BoardTilesColors, BoardTilesTypes, GameData } from '../types/consts';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
@@ -11,6 +12,9 @@ console.log('Loaded: Board.ts');
  * Class to create and manage game's board.
  */
 export default class Board {
+  /** Interface to dipach and listen custom events. */
+  readonly eventInterface: EventTarget;
+
   /** Board height. */
   private readonly height: number;
   /** Board width. */
@@ -20,10 +24,12 @@ export default class Board {
   private ballsColorPreview: string[];
 
   /** Map of board tiles. */
-  private readonly boardMap: BoardTile[][];
+  private readonly boardMap: BoardMapTile[][];
+  /** Points gained by user. */
+  private points: number;
 
   /** Board's pathfinder. */
-  pathfinder: Pathfinder;
+  readonly pathfinder: Pathfinder;
   /** Board's renderer. */
   private readonly renderer: Renderer;
 
@@ -61,6 +67,8 @@ export default class Board {
     }
 
     this.ballsColorPreview = Board.generateBallsColorPreview(3);
+    this.eventInterface = new EventTarget();
+    this.points = 0;
 
     this.hasFinish = false;
     this.hasStart = false;
@@ -82,6 +90,7 @@ export default class Board {
   /**
    * Generates colors for next balls.
    * @private
+   * @static
    * @param quantity - balls quantity.
    *
    */
@@ -97,16 +106,16 @@ export default class Board {
    * @private
    * @param quantity - balls quantity.
    */
-  private generateBalls(quantity: number): BoardTile[] {
+  private generateBalls(quantity: number): void {
     let colorsPreview = [...this.ballsColorPreview];
-    this.ballsColorPreview = Board.generateBallsColorPreview(quantity);
+    this.ballsColorPreview = [...Board.generateBallsColorPreview(quantity)];
 
-    let newBalls: BoardTile[] = []
+    let newBalls: BoardMapTileData[] = [];
     while (quantity) { // TODO: can generate only on free tiles
       let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
       let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
 
-      if (this.boardMap[randomY][randomX].type === BoardTilesTypes.none) {
+      if (this.readBoardMap(randomX, randomY).type === BoardTilesTypes.none) {
         newBalls.push({
           color: colorsPreview[quantity - 1],
           type: BoardTilesTypes.obstacle,
@@ -114,14 +123,14 @@ export default class Board {
           y: randomY
         });
 
-        Object.assign(this.boardMap[randomY][randomX], {
-          color: colorsPreview[quantity - 1],
-          type: BoardTilesTypes.obstacle
-        });
+        this.writeBoardMap(randomX, randomY, colorsPreview[quantity - 1], BoardTilesTypes.obstacle);
         quantity--;
       }
     }
-    return newBalls;
+    let event: BallsGeneratedEvent = new CustomEvent('ballsGenerated', {
+      detail: newBalls
+    });
+    this.eventInterface.dispatchEvent(event);
   }
 
   /**
@@ -130,8 +139,8 @@ export default class Board {
    * @param y - vertical coordinate of tile.
    * @return boardTile - board tile.
    */
-  getBoardMapTile(x: number, y: number): BoardTile {
-    return this.boardMap[y][x];
+  getBoardMapTile(x: number, y: number): BoardMapTile {
+    return this.readBoardMap(x, y);
   }
 
   /**
@@ -139,7 +148,7 @@ export default class Board {
    * @param endpoints - start and end points of path.
    */
   getPath(endpoints: EndPoints): Coordinates[] {
-    if (this.boardMap[endpoints.finish.y][endpoints.finish.x].type === BoardTilesTypes.obstacle)
+    if (this.readBoardMap(endpoints.finish.x, endpoints.finish.y).type === BoardTilesTypes.obstacle)
       return [];
 
     let deepCopyBoardMap = JSON.parse(JSON.stringify(this.boardMap));
@@ -161,18 +170,18 @@ export default class Board {
     if (this.getPath(endpoints).length === 0)
       return false;
 
-    Object.assign(this.boardMap[endpoints.finish.y][endpoints.finish.x], {
-      color: this.boardMap[endpoints.start.y][endpoints.start.x].color,
-      type:this.boardMap[endpoints.start.y][endpoints.start.x].type
-    });
-    Object.assign(this.boardMap[endpoints.start.y][endpoints.start.x], {
-      color: null,
-      type: BoardTilesTypes.none
-    });
+    let startPointData: BoardMapTileData = this.readBoardMap(endpoints.start.x, endpoints.start.y);
+    this.writeBoardMap(endpoints.finish.x, endpoints.finish.y, startPointData.color, startPointData.type);
+    this.writeBoardMap(endpoints.start.x, endpoints.start.y, null, BoardTilesTypes.none);
 
     this.runPatternCheckThenKill();
-    this.renderer.renderBallsDOM(this.generateBalls(3));
+    this.generateBalls(3);
     return true;
+  }
+
+  private readBoardMap(x: number, y: number): BoardMapTile {
+    let deepCopyBoardMapTile = JSON.parse(JSON.stringify(this.boardMap));
+    return deepCopyBoardMapTile[y][x];
   }
 
   /**
@@ -180,12 +189,13 @@ export default class Board {
    * @private
    */
   private runPatternCheckThenKill() {
-    let purgeList = [];
+    // todo: optimize
+    let toPurgeArr = [];
 
     // check all rows
-    this.boardMap.forEach((boardTileRow: BoardTile[]) => {
+    this.boardMap.forEach((boardTileRow: BoardMapTile[]) => {
       // select color and set it's occurrences
-      let selectedTileColor = [...boardTileRow][0].color;
+      let selectedTileColor = boardTileRow[0].color;
       let selectedTileColorOccurrences = 0;
 
       // select next tiles from row
@@ -196,11 +206,11 @@ export default class Board {
 
           // if occurrences allow to kill row; check how long this row is, then kill it
           if (selectedTileColorOccurrences >= GameData.lineToKillLength)
-            for (let j = 0; j < boardTileRow.length; j++) {
+            for (let j = 0; j < this.width; j++) {
               // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
               let tileInConfirmedRow = boardTileRow[i - (GameData.lineToKillLength - 1) + j];
-              if (i - (GameData.lineToKillLength - 1) + j < boardTileRow.length && tileInConfirmedRow.color === selectedTileColor && !purgeList.includes(tileInConfirmedRow))
-                purgeList.push(tileInConfirmedRow);
+              if (i - (GameData.lineToKillLength - 1) + j < this.width && tileInConfirmedRow.color === selectedTileColor && !toPurgeArr.includes(tileInConfirmedRow))
+                toPurgeArr.push(tileInConfirmedRow);
               else
                 break;
             }
@@ -211,27 +221,57 @@ export default class Board {
       }
     });
 
-    console.log(purgeList); // todo: create function that also iterates horizontally and cross
+    // check all columns
+    for (let i = 0; i < this.width; i++) {
+      // select color
+      let selectedTileColor = this.boardMap[0][i].color;
+      let selectedTileColorOccurrences = 0;
+      // select next tiles from column
+      for (let j = 0; j < this.height; j++) {
+        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
+        if (selectedTileColor && this.boardMap[j][i].color === selectedTileColor) {
+          selectedTileColorOccurrences++;
 
-    // for (let i = 0; i < sizes.board.width; i++) { // zbijanie piguł i wirusów w pionie // todo: inspiration only: delete later
-    //   let checkedStatus = board.tiles[0][i].data.status; // status pola, które będzie testowane na 4-krotne występowanie w kolumnie
-    //   let checkSum = 0; // ilość wystąpień takiego samego statusu (piguł/wirusów) w kolumnie
-    //
-    //   for (let j = 0; j < sizes.board.height; j++) { // testowanie kolumny na ilość wystąpień obecnego statusu
-    //     if (checkedStatus && board.tiles[j][i].data.status == checkedStatus) { // zwiększanie sumy kontrolnej, jeśli pole ma testowany status (checkedStatus)
-    //       checkSum++;
-    //       if (checkSum >= 4) // jeśli występują 4 piguły/wirusy w kolumnie, zbijanie wszystkiego co kwalifikuje się do serii zbicia
-    //         for (let k = 0; k < sizes.board.height; k++)
-    //           if (j - 3 + k < sizes.board.height && board.tiles[j - 3 + k][i].data.status == checkedStatus) // sprawdzanie czy jest jeszcze plansza i czy zakończyła się seria takich samych piguł/wirusów
-    //             purgeList.includes(board.tiles[j - 3 + k][i]) ? null : purgeList.push(board.tiles[j - 3 + k][i]);
-    //           else
-    //             break;
-    //     } else { // jeśli piguła/wirus ma inny status, nadpisywanie testowanego statusu, zerowanie ilości wystąpień i dalsze testowanie serii
-    //       checkSum = 1;
-    //       checkedStatus = board.tiles[j][i].data.status;
-    //     }
-    //   }
-    // }
+          // if occurrences allow to kill column; check how long this row is, then kill it
+          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
+            for (let k = 0; k < this.height; k++) {
+              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
+              if (j - (GameData.lineToKillLength - 1) + k < this.height && this.boardMap[j - (GameData.lineToKillLength - 1) + k][i].color === selectedTileColor && !toPurgeArr.includes(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]))
+                toPurgeArr.push(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]);
+              else
+                break;
+            }
+        } else {
+          selectedTileColor = this.boardMap[j][i].color;
+          selectedTileColorOccurrences = 1;
+        }
+      }
+    }
+
+    // todo: create function that iterates cross
+    // kill balls if there are any
+    if (toPurgeArr.length > 0) {
+      // award points
+      this.points += toPurgeArr.length;
+
+      // create and dispatch custom event to eventInterface, (with points and killed balls array)
+      let event: BallsDeletedEvent = new CustomEvent('deletedBalls', {
+        detail: {
+          balls: toPurgeArr,
+          points: toPurgeArr.length
+        }
+      });
+      this.eventInterface.dispatchEvent(event);
+
+      // clear balls in boardMap
+      for (let i = 0; i < toPurgeArr.length; i++) {
+        let tileToKill = toPurgeArr[i]
+        Object.assign(this.boardMap[tileToKill.y][tileToKill.x], {
+          color: null,
+          type: BoardTilesTypes.none
+        });
+      }
+    }
   }
 
   /**
@@ -240,6 +280,14 @@ export default class Board {
    */
   startGame(initialObstaclesCount: number): void {
     this.renderer.renderBoardDOM();
-    this.renderer.renderBallsDOM(this.generateBalls(initialObstaclesCount));
+    this.renderer.setRenderForBoardEvents();
+    this.generateBalls(initialObstaclesCount);
+  }
+
+  private writeBoardMap(x: number, y: number, color: string, type: string) {
+    Object.assign(this.boardMap[y][x], {
+      color: color,
+      type: type
+    });
   }
 }

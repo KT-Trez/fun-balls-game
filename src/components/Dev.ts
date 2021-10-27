@@ -1,5 +1,5 @@
 import Board from '../classes/Board';
-import { BoardProcessTile } from '../types/interfaces';
+import { BoardMap, BoardProcess } from '../types/interfaces';
 
 /**
  * Debugging class.
@@ -8,6 +8,7 @@ export default class Dev {
   /**
    * Stretches text length with spaces.
    * @private
+   * @static
    * @param text - text that will be stretched.
    * @param length - length to which text will be stretched.
    * @return formattedText - formatted text.
@@ -23,16 +24,29 @@ export default class Dev {
 
   /**
    * Logs boardProcess's data.
+   * @static
    * @param dataArray - boardProcess array.
    * @param type - type of data that should be logged.
    */
-  static logBoardProcess(dataArray: Array<Array<BoardProcessTile>>, type: 'pathHelper' | 'xy'| 'type' | 'wasSearched'):void {
+  static logBoardMap(dataArray: BoardMap | BoardProcess, type: 'color' | 'pathHelper' | 'xy'| 'type' | 'wasSearched'): void {
     let resultString = '';
     switch (type) {
+      case 'color':
+        for (let i = 0; i < dataArray.length; i++) {
+          for (let j = 0; j < dataArray[i].length; j++)
+            { // @ts-ignore
+              resultString += ' ' + (dataArray[i][j].color === null ? '-' : dataArray[i][j].color);
+            }
+          resultString += '\n';
+        }
+        console.log(resultString);
+        break;
       case 'pathHelper':
         for (let i = 0; i < dataArray.length; i++) {
           for (let j = 0; j < dataArray[i].length; j++)
-            resultString += ' ' + dataArray[i][j].pathHelper.toString();
+            { // @ts-ignore
+              resultString += ' ' + dataArray[i][j].pathHelper.toString();
+            }
           resultString += '\n';
         }
         console.log(resultString);
@@ -59,7 +73,9 @@ export default class Dev {
       case 'wasSearched':
         for (let i = 0; i < dataArray.length; i++)
           for (let j = 0; j < dataArray[i].length; j++)
-            resultString += ' ' + dataArray[i][j].wasSearched;
+            { // @ts-ignore
+              resultString += ' ' + dataArray[i][j].wasSearched;
+            }
           resultString += '\n';
         console.log(resultString);
         break;
@@ -68,6 +84,7 @@ export default class Dev {
 
   /**
    * Enables custom input for board height, width and obstacles count.
+   * @static
    */
   static runCustomInput() {
     document.getElementById('js-custom-input').classList.remove('js-hide');

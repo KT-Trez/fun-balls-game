@@ -1,6 +1,7 @@
 export default class Tools {
   /**
    * Returns number from (min, max) range - not inclusive.
+   * @static
    * @param {number} min - min of range.
    * @param {number} max - max of range.
    */
@@ -12,6 +13,7 @@ export default class Tools {
 
   /**
    * Returns number from <min, max> range - inclusive.
+   * @static
    * @param {number} min - min of range.
    * @param {number} max - max of range.
    */
