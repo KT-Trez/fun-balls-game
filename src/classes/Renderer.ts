@@ -1,20 +1,33 @@
 import Board from './Board';
-import { BoardMap, BoardData, Coordinates, EndPoints } from '../types/interfaces';
+import { BoardData, Coordinates, EndPoints, BoardTile } from '../types/interfaces';
 import { BoardTilesTypes } from '../types/consts';
 
 console.log('Loaded: Renderer.ts');
 
 
+/**
+ * Class that renders all DOM operation, inputs and game output.
+ */
 export default class Renderer {
+    /** Data about the board. */
     private readonly board: BoardData;
 
+    /** Don't render path before selecting start flag. */
     private renderPathFlag: boolean;
+    /** Selected start tile. */
     private selectedStart: HTMLTableCellElement | null;
 
+    /** Data about start and finish points. */
     private readonly endPoints: EndPoints;
-
+    /** Last path that was rendered on the board. */
     private lastRenderedPath: Coordinates[];
 
+    /**
+     * Creates new renderer for board.
+     * @param board - board instance that will allow using dynamic board data.
+     * @param height - board height.
+     * @param width - board width.
+     */
     constructor(board: Board, height: number, width: number) {
         this.board = {
             height: height,
@@ -33,15 +46,6 @@ export default class Renderer {
         this.lastRenderedPath = [];
     }
 
-    private cleanLastRenderedPath(): void {
-        for (let i = 0; i < this.lastRenderedPath.length; i++) {
-            let pathTile = document.querySelector(`[data-x="${this.lastRenderedPath[i].x}"][data-y="${this.lastRenderedPath[i].y}"]`);
-            pathTile.classList.remove('ball--path');
-        }
-
-        this.lastRenderedPath = [];
-    }
-
     /**
      * Clears div with id 'js-display', and appends new content.
      * @param element - element that will be appended.
@@ -56,7 +60,20 @@ export default class Renderer {
     }
 
     /**
-     * Generates new DOM board with class instance's height and width.
+     * Clears recently rendered path between points.
+     * @private
+     */
+    private clearLastRenderedPath(): void {
+        for (let i = 0; i < this.lastRenderedPath.length; i++) {
+            let pathTile = document.querySelector(`[data-x="${this.lastRenderedPath[i].x}"][data-y="${this.lastRenderedPath[i].y}"]`);
+            pathTile.classList.remove('ball--path');
+        }
+
+        this.lastRenderedPath = [];
+    }
+
+    /**
+     * Generates new DOM board with height and width set in class object.
      */
     renderBoardDOM(): void {
         let boardDOM: HTMLTableElement = document.createElement('table');
@@ -82,22 +99,25 @@ export default class Renderer {
     }
 
     /**
-     * Renders obstacles on the DOM board.
+     * Renders balls on the DOM board.
      */
-    renderObstaclesDOM(boardMap: BoardMap): void {
+    renderBallsDOM(obstaclesArr: BoardTile[]): void {
+        for (let i = 0; i < obstaclesArr.length; i++) {
+            let ballData = obstaclesArr[i];
+            let ball = document.createElement('div');
 
-        for (let i = 0; i < boardMap.length; i++)
-            for (let j = 0; j < boardMap[i].length; j++)
-                if (boardMap[i][j].type === BoardTilesTypes.obstacle) {
-                    let ball = document.createElement('div');
-                    ball.classList.add('ball',  'ball-color--' + boardMap[i][j].color);
-
-                    document.querySelector(`[data-x="${j}"][data-y="${i}"]`).appendChild(ball);
-                }
+            ball.classList.add('ball', 'ball-color--' + ballData.color);
+            document.querySelector(`[data-x="${ballData.x}"][data-y="${ballData.y}"]`).appendChild(ball);
+        }
     }
 
+    /**
+     * Renders path between start set in class object and specified tile.
+     * @private
+     * @param tile - end point of path.
+     */
     private renderPath(tile: HTMLTableCellElement): void {
-        this.cleanLastRenderedPath();
+        this.clearLastRenderedPath();
 
         let endpoints = {
             finish: {
@@ -117,13 +137,18 @@ export default class Renderer {
     }
 
     /**
-     * Sets all events (mostly onclick) for board tile.
+     * Sets all events for board tile.
      * @private
-     * @param tile - board tile.
+     * @param tile - board tile to set events for.
      */
     private setTileEvents(tile: HTMLTableCellElement): void {
         tile.onclick = () => {
             if (!this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
+                this.endPoints.start = {
+                    x: parseInt(tile.dataset.x),
+                    y: parseInt(tile.dataset.y)
+                };
+
                 this.renderPathFlag = true;
 
                 if (this.selectedStart)
@@ -131,33 +156,37 @@ export default class Renderer {
 
                 this.selectedStart = tile;
                 tile.children[0].classList.add('ball--selected');
-
+            } else if (this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
                 this.endPoints.start = {
                     x: parseInt(tile.dataset.x),
                     y: parseInt(tile.dataset.y)
                 };
-            } else if (this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
+
                 this.selectedStart.children[0].classList.remove('ball--selected');
 
                 this.selectedStart = tile;
                 tile.children[0].classList.add('ball--selected');
-
-                this.endPoints.start = {
-                    x: parseInt(tile.dataset.x),
-                    y: parseInt(tile.dataset.y)
-                };
             } else if (this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type === BoardTilesTypes.none) {
-                this.renderPathFlag = false;
-
-                this.selectedStart.children[0].classList.remove('ball--selected');
-                this.selectedStart = null;
-
                 this.endPoints.finish = {
                     x: parseInt(tile.dataset.x),
                     y: parseInt(tile.dataset.y)
                 };
 
-                this.board.instance.moveBall(this.endPoints);
+                if (this.board.instance.getPath(this.endPoints).length === 0)
+                    return this.endPoints.finish = null;
+
+                this.renderPathFlag = false;
+
+                this.selectedStart.children[0].classList.remove('ball--selected');
+                this.selectedStart = null;
+
+                if (this.board.instance.moveBall(this.endPoints)) {
+                    let startDOM = document.querySelector(`[data-x="${this.endPoints.start.x}"][data-y="${this.endPoints.start.y}"]`);
+                    document.querySelector(`[data-x="${this.endPoints.finish.x}"][data-y="${this.endPoints.finish.y}"]`).appendChild(startDOM.firstChild);
+
+                    this.selectedStart = null;
+                    this.clearLastRenderedPath();
+                }
             }
         };
 
@@ -168,7 +197,7 @@ export default class Renderer {
 
         tile.onmouseout = () => {
             if (this.renderPathFlag)
-                this.cleanLastRenderedPath();
+                this.clearLastRenderedPath();
         };
     }
 }

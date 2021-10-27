@@ -37,3 +37,8 @@ export const BoardTilesTypes = {
     obstacle: 'x',
     start: 's'
 }
+
+/** Additional game data. */
+export const GameData = {
+    lineToKillLength: 3
+}

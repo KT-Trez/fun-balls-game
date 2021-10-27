@@ -1,5 +1,5 @@
 import { BoardTile, Coordinates, EndPoints } from '../types/interfaces';
-import { BoardTilesColors, BoardTilesTypes } from '../types/consts';
+import { BoardTilesColors, BoardTilesTypes, GameData } from '../types/consts';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
 import Tools from '../components/Tools';
@@ -15,6 +15,9 @@ export default class Board {
   private readonly height: number;
   /** Board width. */
   private readonly width: number;
+
+  /** Next balls colors that will be used. */
+  private ballsColorPreview: string[];
 
   /** Map of board tiles. */
   private readonly boardMap: BoardTile[][];
@@ -57,6 +60,8 @@ export default class Board {
       this.boardMap.push(row);
     }
 
+    this.ballsColorPreview = Board.generateBallsColorPreview(3);
+
     this.hasFinish = false;
     this.hasStart = false;
 
@@ -75,24 +80,48 @@ export default class Board {
   }
 
   /**
-   * Generates obstacles on the board.
+   * Generates colors for next balls.
    * @private
-   * @param obstaclesCount - obstacles quantity.
+   * @param quantity - balls quantity.
+   *
    */
-  private generateObstacles(obstaclesCount: number): void {
-    while (obstaclesCount) {
-      let randomColor: string = BoardTilesColors[Tools.getRandomIntInclusive(0, BoardTilesColors.length)].id;
+  private static generateBallsColorPreview(quantity: number): string[] {
+    let colors: string[] = [];
+    for (let i = 0; i < quantity; i++)
+      colors.push(BoardTilesColors[Tools.getRandomIntInclusive(0, BoardTilesColors.length - 1)].id);
+    return colors;
+  }
+
+  /**
+   * Generates balls on the board.
+   * @private
+   * @param quantity - balls quantity.
+   */
+  private generateBalls(quantity: number): BoardTile[] {
+    let colorsPreview = [...this.ballsColorPreview];
+    this.ballsColorPreview = Board.generateBallsColorPreview(quantity);
+
+    let newBalls: BoardTile[] = []
+    while (quantity) { // TODO: can generate only on free tiles
       let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
       let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
 
-      if (this.boardMap[randomX][randomY].type === BoardTilesTypes.none) {
-        Object.assign(this.boardMap[randomX][randomY], {
-          color: randomColor,
+      if (this.boardMap[randomY][randomX].type === BoardTilesTypes.none) {
+        newBalls.push({
+          color: colorsPreview[quantity - 1],
+          type: BoardTilesTypes.obstacle,
+          x: randomX,
+          y: randomY
+        });
+
+        Object.assign(this.boardMap[randomY][randomX], {
+          color: colorsPreview[quantity - 1],
           type: BoardTilesTypes.obstacle
         });
-        obstaclesCount--;
+        quantity--;
       }
     }
+    return newBalls;
   }
 
   /**
@@ -125,8 +154,84 @@ export default class Board {
    * Moves ball between two points.
    * @param endpoints - points from and to which ball will be moved.
    */
-  moveBall(endpoints: EndPoints): void {
-    console.log('Moving ball.', endpoints);
+  moveBall(endpoints: EndPoints): boolean {
+    if (this.boardMap[endpoints.finish.y][endpoints.finish.x].type !== BoardTilesTypes.none)
+      return false;
+
+    if (this.getPath(endpoints).length === 0)
+      return false;
+
+    Object.assign(this.boardMap[endpoints.finish.y][endpoints.finish.x], {
+      color: this.boardMap[endpoints.start.y][endpoints.start.x].color,
+      type:this.boardMap[endpoints.start.y][endpoints.start.x].type
+    });
+    Object.assign(this.boardMap[endpoints.start.y][endpoints.start.x], {
+      color: null,
+      type: BoardTilesTypes.none
+    });
+
+    this.runPatternCheckThenKill();
+    this.renderer.renderBallsDOM(this.generateBalls(3));
+    return true;
+  }
+
+  /**
+   * Checks if there are balls in pattern that can be killed, then kills them.
+   * @private
+   */
+  private runPatternCheckThenKill() {
+    let purgeList = [];
+
+    // check all rows
+    this.boardMap.forEach((boardTileRow: BoardTile[]) => {
+      // select color and set it's occurrences
+      let selectedTileColor = [...boardTileRow][0].color;
+      let selectedTileColorOccurrences = 0;
+
+      // select next tiles from row
+      for (let i = 0; i < boardTileRow.length; i++) {
+        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
+        if (selectedTileColor && boardTileRow[i].color === selectedTileColor) {
+          selectedTileColorOccurrences++;
+
+          // if occurrences allow to kill row; check how long this row is, then kill it
+          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
+            for (let j = 0; j < boardTileRow.length; j++) {
+              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
+              let tileInConfirmedRow = boardTileRow[i - (GameData.lineToKillLength - 1) + j];
+              if (i - (GameData.lineToKillLength - 1) + j < boardTileRow.length && tileInConfirmedRow.color === selectedTileColor && !purgeList.includes(tileInConfirmedRow))
+                purgeList.push(tileInConfirmedRow);
+              else
+                break;
+            }
+        } else {
+          selectedTileColor = boardTileRow[i].color;
+          selectedTileColorOccurrences = 1;
+        }
+      }
+    });
+
+    console.log(purgeList); // todo: create function that also iterates horizontally and cross
+
+    // for (let i = 0; i < sizes.board.width; i++) { // zbijanie piguł i wirusów w pionie // todo: inspiration only: delete later
+    //   let checkedStatus = board.tiles[0][i].data.status; // status pola, które będzie testowane na 4-krotne występowanie w kolumnie
+    //   let checkSum = 0; // ilość wystąpień takiego samego statusu (piguł/wirusów) w kolumnie
+    //
+    //   for (let j = 0; j < sizes.board.height; j++) { // testowanie kolumny na ilość wystąpień obecnego statusu
+    //     if (checkedStatus && board.tiles[j][i].data.status == checkedStatus) { // zwiększanie sumy kontrolnej, jeśli pole ma testowany status (checkedStatus)
+    //       checkSum++;
+    //       if (checkSum >= 4) // jeśli występują 4 piguły/wirusy w kolumnie, zbijanie wszystkiego co kwalifikuje się do serii zbicia
+    //         for (let k = 0; k < sizes.board.height; k++)
+    //           if (j - 3 + k < sizes.board.height && board.tiles[j - 3 + k][i].data.status == checkedStatus) // sprawdzanie czy jest jeszcze plansza i czy zakończyła się seria takich samych piguł/wirusów
+    //             purgeList.includes(board.tiles[j - 3 + k][i]) ? null : purgeList.push(board.tiles[j - 3 + k][i]);
+    //           else
+    //             break;
+    //     } else { // jeśli piguła/wirus ma inny status, nadpisywanie testowanego statusu, zerowanie ilości wystąpień i dalsze testowanie serii
+    //       checkSum = 1;
+    //       checkedStatus = board.tiles[j][i].data.status;
+    //     }
+    //   }
+    // }
   }
 
   /**
@@ -134,10 +239,7 @@ export default class Board {
    * @param initialObstaclesCount - initial obstacle quantity.
    */
   startGame(initialObstaclesCount: number): void {
-    this.generateObstacles(initialObstaclesCount);
     this.renderer.renderBoardDOM();
-    this.renderer.renderObstaclesDOM(this.boardMap);
-
-    // todo: game progress
+    this.renderer.renderBallsDOM(this.generateBalls(initialObstaclesCount));
   }
 }

@@ -124,9 +124,9 @@ export default class Pathfinder {
 
             // check if there is next tile or path is blocked by obstacles
             if (lastTile === lastTileBeforeSearch) {
-                alert('Cannot find path!');
+                console.log('[WARNING] Hovered tile cannot be accessed.');
                 pathCreated = true;
-                break;
+                return [];
             }
         }
 
