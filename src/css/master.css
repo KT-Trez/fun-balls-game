@@ -26,12 +26,20 @@ body {
   border: 1px solid gray;
 }
 
+#js-color-preview {
+  height: 60px;
+  width: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
 /* balls */
 .ball {
   height: 30px;
   width: 30px;
-  border: 1px solid lightgray;
-  border-radius: 30px;
+  border: 1px solid transparent;
+  border-radius: 50%;
   margin: auto;
 }
 

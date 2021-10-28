@@ -32,8 +32,8 @@ export const BoardTilesColors = [
 
 /** Types of board tiles. */
 export const BoardTilesTypes = {
-    finish: 'e',
-    none: '0',
+    finish: 'f',
+    none: '-',
     obstacle: 'x',
     start: 's'
 }

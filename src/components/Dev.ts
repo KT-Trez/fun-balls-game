@@ -33,20 +33,20 @@ export default class Dev {
     switch (type) {
       case 'color':
         for (let i = 0; i < dataArray.length; i++) {
-          for (let j = 0; j < dataArray[i].length; j++)
-            { // @ts-ignore
-              resultString += ' ' + (dataArray[i][j].color === null ? '-' : dataArray[i][j].color);
-            }
+          for (let j = 0; j < dataArray[i].length; j++) {
+            // @ts-ignore
+            resultString += ' ' + (dataArray[i][j].color === null ? '-' : dataArray[i][j].color);
+          }
           resultString += '\n';
         }
         console.log(resultString);
         break;
       case 'pathHelper':
         for (let i = 0; i < dataArray.length; i++) {
-          for (let j = 0; j < dataArray[i].length; j++)
-            { // @ts-ignore
-              resultString += ' ' + dataArray[i][j].pathHelper.toString();
-            }
+          for (let j = 0; j < dataArray[i].length; j++) {
+            // @ts-ignore
+            resultString += ' ' + dataArray[i][j].pathHelper.toString();
+          }
           resultString += '\n';
         }
         console.log(resultString);

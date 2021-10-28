@@ -1,11 +1,14 @@
 {
   "alwaysStrict": true,
   "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "baseUrl": "./ts",
     "lib": ["dom", "es2020"],
     "module": "ES2020",
     "outDir": "js",
-    "sourceMap": true
+    "sourceMap": true,
+    "target": "ES2021"
   },
   "typedocOptions": {
     "cleanOutputDir": true,

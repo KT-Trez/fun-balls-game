@@ -1,9 +1,12 @@
-import { BallsDeletedEvent, BallsGeneratedEvent } from '../types/events';
+import { DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent } from '../types/events';
+import { BoardInterface } from '../types/classInterfaces';
 import { BoardMapTile, BoardMapTileData, Coordinates, EndPoints } from '../types/interfaces';
 import { BoardTilesColors, BoardTilesTypes, GameData } from '../types/consts';
+import { logStart } from '../types/decorators';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
 import Tools from '../components/Tools';
+import Dev from '../components/Dev';
 
 console.log('Loaded: Board.ts');
 
@@ -11,8 +14,8 @@ console.log('Loaded: Board.ts');
 /**
  * Class to create and manage game's board.
  */
-export default class Board {
-  /** Interface to dipach and listen custom events. */
+export default class Board implements BoardInterface {
+  /** Interface to dispatch and listen custom events. */
   readonly eventInterface: EventTarget;
 
   /** Board height. */
@@ -29,7 +32,7 @@ export default class Board {
   private points: number;
 
   /** Board's pathfinder. */
-  readonly pathfinder: Pathfinder;
+  private readonly pathfinder: Pathfinder;
   /** Board's renderer. */
   private readonly renderer: Renderer;
 
@@ -42,6 +45,7 @@ export default class Board {
   private finish: Coordinates;
   /** Start point coordinates. */
   private start: Coordinates;
+
 
   /**
    * Creates basic board data.
@@ -66,9 +70,11 @@ export default class Board {
       this.boardMap.push(row);
     }
 
-    this.ballsColorPreview = Board.generateBallsColorPreview(3);
     this.eventInterface = new EventTarget();
     this.points = 0;
+
+    this.ballsColorPreview = [];
+    this.generateBallsColorPreview(3);
 
     this.hasFinish = false;
     this.hasStart = false;
@@ -88,17 +94,87 @@ export default class Board {
   }
 
   /**
-   * Generates colors for next balls.
+   * Checks if there are balls in pattern that can be killed, then kills them.
    * @private
-   * @static
-   * @param quantity - balls quantity.
-   *
    */
-  private static generateBallsColorPreview(quantity: number): string[] {
-    let colors: string[] = [];
-    for (let i = 0; i < quantity; i++)
-      colors.push(BoardTilesColors[Tools.getRandomIntInclusive(0, BoardTilesColors.length - 1)].id);
-    return colors;
+  private checkBoardThenDeleteBalls() { // todo: optimize
+    let toPurgeArr = [];
+
+    // check all rows
+    this.boardMap.forEach((boardTileRow: BoardMapTile[]) => {
+      // select color and set it's occurrences
+      let selectedTileColor = boardTileRow[0].color;
+      let selectedTileColorOccurrences = 0;
+
+      // select next tiles from row
+      for (let i = 0; i < boardTileRow.length; i++) {
+        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
+        if (selectedTileColor && boardTileRow[i].color === selectedTileColor) {
+          selectedTileColorOccurrences++;
+
+          // if occurrences allow to kill row; check how long this row is, then kill it
+          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
+            for (let j = 0; j < this.width; j++) {
+              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
+              let tileInConfirmedRow = boardTileRow[i - (GameData.lineToKillLength - 1) + j];
+              if (i - (GameData.lineToKillLength - 1) + j < this.width && tileInConfirmedRow.color === selectedTileColor)
+                !toPurgeArr.includes(tileInConfirmedRow) ? toPurgeArr.push(tileInConfirmedRow) : null;
+              else
+                break;
+            }
+        } else {
+          selectedTileColor = boardTileRow[i].color;
+          selectedTileColorOccurrences = 1;
+        }
+      }
+    });
+
+    // check all columns
+    for (let i = 0; i < this.width; i++) {
+      // select color
+      let selectedTileColor = this.boardMap[0][i].color;
+      let selectedTileColorOccurrences = 0;
+      // select next tiles from column
+      for (let j = 0; j < this.height; j++) {
+        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
+        if (selectedTileColor && this.boardMap[j][i].color === selectedTileColor) {
+          selectedTileColorOccurrences++;
+
+          // if occurrences allow to kill column; check how long this row is, then kill it
+          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
+            for (let k = 0; k < this.height; k++) {
+              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
+              if (j - (GameData.lineToKillLength - 1) + k < this.height && this.boardMap[j - (GameData.lineToKillLength - 1) + k][i].color === selectedTileColor)
+                !toPurgeArr.includes(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]) ? toPurgeArr.push(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]) : null;
+              else
+                break;
+            }
+        } else {
+          selectedTileColor = this.boardMap[j][i].color;
+          selectedTileColorOccurrences = 1;
+        }
+      }
+    }
+
+    // todo: create function that iterates cross
+    // kill balls if there are any
+    if (toPurgeArr.length > 0) {
+      // award points
+      this.points += toPurgeArr.length;
+
+      // create and dispatch custom event to eventInterface, (with points and killed balls array)
+      let event: DeletedBallsEvent = new CustomEvent('deletedBalls', {
+        detail: {
+          balls: toPurgeArr,
+          points: toPurgeArr.length
+        }
+      });
+      this.eventInterface.dispatchEvent(event);
+
+      // clear balls in boardMap
+      for (let i = 0; i < toPurgeArr.length; i++)
+        this.writeBoardMap(toPurgeArr[i].x, toPurgeArr[i].y, null, BoardTilesTypes.none);
+    }
   }
 
   /**
@@ -107,28 +183,45 @@ export default class Board {
    * @param quantity - balls quantity.
    */
   private generateBalls(quantity: number): void {
-    let colorsPreview = [...this.ballsColorPreview];
-    this.ballsColorPreview = [...Board.generateBallsColorPreview(quantity)];
-
+    let initialQuantity = quantity;
     let newBalls: BoardMapTileData[] = [];
-    while (quantity) { // TODO: can generate only on free tiles
+    while (quantity) { // TODO: can generate only on free tiles && game can end
       let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
       let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
 
       if (this.readBoardMap(randomX, randomY).type === BoardTilesTypes.none) {
         newBalls.push({
-          color: colorsPreview[quantity - 1],
+          color: this.ballsColorPreview[quantity - 1],
           type: BoardTilesTypes.obstacle,
           x: randomX,
           y: randomY
         });
 
-        this.writeBoardMap(randomX, randomY, colorsPreview[quantity - 1], BoardTilesTypes.obstacle);
+        this.writeBoardMap(randomX, randomY, this.ballsColorPreview[quantity - 1], BoardTilesTypes.obstacle);
         quantity--;
       }
     }
-    let event: BallsGeneratedEvent = new CustomEvent('ballsGenerated', {
+    this.generateBallsColorPreview(initialQuantity);
+
+    let event: GeneratedBallsEvent = new CustomEvent('generatedBalls', {
       detail: newBalls
+    });
+    this.eventInterface.dispatchEvent(event);
+  }
+
+  /**
+   * Generates colors for next balls.
+   * @private
+   * @param quantity - balls quantity.
+   */
+  private generateBallsColorPreview(quantity: number) {
+    let colors: string[] = [];
+    for (let i = 0; i < quantity; i++)
+      colors.push(BoardTilesColors[Tools.getRandomIntInclusive(0, BoardTilesColors.length - 1)].id);
+    this.ballsColorPreview = colors;
+
+    let event: PreviewedBallsEvent = new CustomEvent('previewedBalls', {
+      detail: colors
     });
     this.eventInterface.dispatchEvent(event);
   }
@@ -174,117 +267,45 @@ export default class Board {
     this.writeBoardMap(endpoints.finish.x, endpoints.finish.y, startPointData.color, startPointData.type);
     this.writeBoardMap(endpoints.start.x, endpoints.start.y, null, BoardTilesTypes.none);
 
-    this.runPatternCheckThenKill();
+    this.checkBoardThenDeleteBalls();
     this.generateBalls(3);
+
+    Dev.logBoardMap(this.boardMap, 'color');
     return true;
   }
 
+  /**
+   * Reads tile from BoardMap.
+   * @private
+   * @param x - horizontal coordinate of tile.
+   * @param y - vertical coordinate of tile.
+   * @return tile - odczytany kafelek.
+   */
   private readBoardMap(x: number, y: number): BoardMapTile {
     let deepCopyBoardMapTile = JSON.parse(JSON.stringify(this.boardMap));
     return deepCopyBoardMapTile[y][x];
   }
 
   /**
-   * Checks if there are balls in pattern that can be killed, then kills them.
-   * @private
-   */
-  private runPatternCheckThenKill() {
-    // todo: optimize
-    let toPurgeArr = [];
-
-    // check all rows
-    this.boardMap.forEach((boardTileRow: BoardMapTile[]) => {
-      // select color and set it's occurrences
-      let selectedTileColor = boardTileRow[0].color;
-      let selectedTileColorOccurrences = 0;
-
-      // select next tiles from row
-      for (let i = 0; i < boardTileRow.length; i++) {
-        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
-        if (selectedTileColor && boardTileRow[i].color === selectedTileColor) {
-          selectedTileColorOccurrences++;
-
-          // if occurrences allow to kill row; check how long this row is, then kill it
-          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
-            for (let j = 0; j < this.width; j++) {
-              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
-              let tileInConfirmedRow = boardTileRow[i - (GameData.lineToKillLength - 1) + j];
-              if (i - (GameData.lineToKillLength - 1) + j < this.width && tileInConfirmedRow.color === selectedTileColor && !toPurgeArr.includes(tileInConfirmedRow))
-                toPurgeArr.push(tileInConfirmedRow);
-              else
-                break;
-            }
-        } else {
-          selectedTileColor = boardTileRow[i].color;
-          selectedTileColorOccurrences = 1;
-        }
-      }
-    });
-
-    // check all columns
-    for (let i = 0; i < this.width; i++) {
-      // select color
-      let selectedTileColor = this.boardMap[0][i].color;
-      let selectedTileColorOccurrences = 0;
-      // select next tiles from column
-      for (let j = 0; j < this.height; j++) {
-        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
-        if (selectedTileColor && this.boardMap[j][i].color === selectedTileColor) {
-          selectedTileColorOccurrences++;
-
-          // if occurrences allow to kill column; check how long this row is, then kill it
-          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
-            for (let k = 0; k < this.height; k++) {
-              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
-              if (j - (GameData.lineToKillLength - 1) + k < this.height && this.boardMap[j - (GameData.lineToKillLength - 1) + k][i].color === selectedTileColor && !toPurgeArr.includes(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]))
-                toPurgeArr.push(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]);
-              else
-                break;
-            }
-        } else {
-          selectedTileColor = this.boardMap[j][i].color;
-          selectedTileColorOccurrences = 1;
-        }
-      }
-    }
-
-    // todo: create function that iterates cross
-    // kill balls if there are any
-    if (toPurgeArr.length > 0) {
-      // award points
-      this.points += toPurgeArr.length;
-
-      // create and dispatch custom event to eventInterface, (with points and killed balls array)
-      let event: BallsDeletedEvent = new CustomEvent('deletedBalls', {
-        detail: {
-          balls: toPurgeArr,
-          points: toPurgeArr.length
-        }
-      });
-      this.eventInterface.dispatchEvent(event);
-
-      // clear balls in boardMap
-      for (let i = 0; i < toPurgeArr.length; i++) {
-        let tileToKill = toPurgeArr[i]
-        Object.assign(this.boardMap[tileToKill.y][tileToKill.x], {
-          color: null,
-          type: BoardTilesTypes.none
-        });
-      }
-    }
-  }
-
-  /**
    * Starts and handles game progress.
    * @param initialObstaclesCount - initial obstacle quantity.
    */
+  @logStart
   startGame(initialObstaclesCount: number): void {
-    this.renderer.renderBoardDOM();
+    this.renderer.renderBoard();
     this.renderer.setRenderForBoardEvents();
     this.generateBalls(initialObstaclesCount);
   }
 
-  private writeBoardMap(x: number, y: number, color: string, type: string) {
+  /**
+   * Writes tile in BoardMap.
+   * @private
+   * @param x - horizontal coordinate of tile.
+   * @param y - vertical coordinate of tile.
+   * @param color - new color.
+   * @param type - new type.
+   */
+  private writeBoardMap(x: number, y: number, color: string, type: string): void {
     Object.assign(this.boardMap[y][x], {
       color: color,
       type: type

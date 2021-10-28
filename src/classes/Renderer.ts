@@ -1,7 +1,8 @@
-import { BallsDeletedEvent, BallsGeneratedEvent } from '../types/events';
 import Board from './Board';
 import { BoardData, Coordinates, EndPoints, BoardMapTile } from '../types/interfaces';
 import { BoardTilesTypes } from '../types/consts';
+import { DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent } from '../types/events';
+import { RendererInterface } from '../types/classInterfaces';
 
 console.log('Loaded: Renderer.ts');
 
@@ -9,7 +10,7 @@ console.log('Loaded: Renderer.ts');
 /**
  * Class that renders all DOM operation, inputs and game output.
  */
-export default class Renderer {
+export default class Renderer implements RendererInterface {
     /** Data about the board. */
     private readonly board: BoardData;
 
@@ -18,8 +19,6 @@ export default class Renderer {
     /** Selected start tile. */
     private selectedStart: HTMLTableCellElement | null;
 
-    /** If balls have been killed, there is a list of them to un-render. */
-    private ballsToUnRender: BoardMapTile[];
     /** Data about start and finish points. */
     private readonly endPoints: EndPoints;
     /** Last path that was rendered on the board. */
@@ -47,7 +46,6 @@ export default class Renderer {
             start: null
         };
 
-        this.ballsToUnRender = [];
         this.lastRenderedPath = [];
     }
 
@@ -64,12 +62,14 @@ export default class Renderer {
         display.appendChild(element);
     }
 
-    private clearDeletedBalls() {
-        for (let i = 0; i < this.ballsToUnRender.length; i++) {
-            let ball = this.ballsToUnRender[i];
-            document.querySelector(`[data-x="${ball.x}"][data-y="${ball.y}"]`).firstChild.remove();
-        }
-        this.ballsToUnRender = [];
+    /**
+     * Un-render balls that were deleted.
+     * @private
+     * @param balls - balls to un-render.
+     */
+    private static clearDeletedBalls(balls): void { // todo: add decorator
+        for (let i = 0; i < balls.length; i++)
+            document.querySelector(`[data-x="${balls[i].x}"][data-y="${balls[i].y}"]`).firstChild.remove();
     }
 
     /**
@@ -88,7 +88,7 @@ export default class Renderer {
     /**
      * Generates new DOM board with height and width set in class object.
      */
-    renderBoardDOM(): void {
+    renderBoard(): void {
         let boardDOM: HTMLTableElement = document.createElement('table');
         boardDOM.classList.add('board');
 
@@ -113,10 +113,13 @@ export default class Renderer {
 
     /**
      * Renders balls on the DOM board.
+     * @static
+     * @private
+     * @param ballsArr - balls to render.
      */
-    renderBallsDOM(obstaclesArr: BoardMapTile[]): void {
-        for (let i = 0; i < obstaclesArr.length; i++) {
-            let ballData = obstaclesArr[i];
+    private static renderBalls(ballsArr: BoardMapTile[]): void {
+        for (let i = 0; i < ballsArr.length; i++) {
+            let ballData = ballsArr[i];
             let ball = document.createElement('div');
 
             ball.classList.add('ball', 'ball-color--' + ballData.color);
@@ -153,13 +156,27 @@ export default class Renderer {
      * Sets renders for board events.
      */
     setRenderForBoardEvents(): void {
-        this.board.instance.eventInterface.addEventListener('deletedBalls', (event: BallsDeletedEvent) => {
-            this.ballsToUnRender = event.detail.balls;
+        this.board.instance.eventInterface.addEventListener('deletedBalls', (event: DeletedBallsEvent) => {
+            Renderer.clearDeletedBalls(event.detail.balls);
+
             let pointsCountDOM = document.getElementById('js-points-count');
             pointsCountDOM.innerText = (parseInt(pointsCountDOM.innerText) + event.detail.points).toString();
         });
 
-        this.board.instance.eventInterface.addEventListener('ballsGenerated', (event: BallsGeneratedEvent) => this.renderBallsDOM(event.detail));
+        this.board.instance.eventInterface.addEventListener('generatedBalls', (event: GeneratedBallsEvent) => Renderer.renderBalls(event.detail));
+
+        this.board.instance.eventInterface.addEventListener('previewedBalls', (event: PreviewedBallsEvent) => {
+            let colorPreviewDOM = document.getElementById('js-color-preview');
+            while (colorPreviewDOM.firstChild)
+                colorPreviewDOM.removeChild(colorPreviewDOM.firstChild);
+
+
+            for (let i = 0; i < event.detail.length; i++) {
+                let ballDOM = document.createElement('div');
+                ballDOM.className = 'ball ball-color--' + event.detail[i];
+                colorPreviewDOM.appendChild(ballDOM);
+            }
+        });
     }
 
     /**
@@ -216,15 +233,16 @@ export default class Renderer {
                 this.selectedStart.children[0].classList.remove('ball--selected');
                 this.selectedStart = null;
 
-                if (this.board.instance.moveBall(this.endPoints)) {
-                    let startDOM = document.querySelector(`[data-x="${this.endPoints.start.x}"][data-y="${this.endPoints.start.y}"]`);
-                    document.querySelector(`[data-x="${this.endPoints.finish.x}"][data-y="${this.endPoints.finish.y}"]`).appendChild(startDOM.firstChild);
+                let startDOM = document.querySelector(`[data-x="${this.endPoints.start.x}"][data-y="${this.endPoints.start.y}"]`);
+                let finishDOM = document.querySelector(`[data-x="${this.endPoints.finish.x}"][data-y="${this.endPoints.finish.y}"]`);
+                finishDOM.appendChild(startDOM.firstChild);
 
+                if (this.board.instance.moveBall(this.endPoints)) {
                     this.selectedStart = null;
                     this.clearLastRenderedPath();
-
-                    if (this.ballsToUnRender.length > 0)
-                        this.clearDeletedBalls();
+                } else {
+                    console.log('[ERROR] Corrupted move. Trying to restore last known layout.');
+                    startDOM.appendChild(finishDOM.firstChild);
                 }
             }
         };

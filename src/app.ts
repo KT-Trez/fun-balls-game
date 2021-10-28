@@ -1,5 +1,6 @@
-console.log('Loaded: app.ts');
 import Board from './classes/Board';
+
+console.log('Loaded: app.ts');
 
 import './css/master.css';
 
