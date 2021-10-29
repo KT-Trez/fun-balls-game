@@ -14,8 +14,13 @@ export interface BoardInterface {
 
 /** Interface for Collider class. */
 export interface ColliderInterface {
+    /** Searches for all balls that can be deleted. */
     checkAllAxis: Function;
+    /** Searches horizontally and vertically for balls that can be deleted. */
     checkAxis: Function;
+    /** Searches for balls that can be in a slant. */
+    checkSlant: Function;
+    /** Searches for balls that can be in all slants. */
     checkSlants: Function;
 }
 

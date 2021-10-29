@@ -40,5 +40,5 @@ export const BoardTilesTypes = {
 
 /** Additional game data. */
 export const GameData = {
-    lineToKillLength: 3
+    lineToKillLength: 5
 }

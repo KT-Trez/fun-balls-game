@@ -2,6 +2,7 @@ import {ColliderInterface} from '../types/classInterfaces';
 import {BoardData, BoardMap, BoardMapTileData} from '../types/interfaces';
 import {GameData} from '../types/consts';
 import Tools from '../components/Tools';
+import {measurePatternRecognitionPerformance} from '../types/decorators';
 
 
 console.log('Loaded: Collider.ts');
@@ -21,6 +22,12 @@ export default class Collider implements ColliderInterface {
         }
     }
 
+    /**
+     * Searches for all balls that can be deleted.
+     * @param boardMap - board map.
+     * @return tilesArr - list of all balls that can be deleted.
+     */
+    @measurePatternRecognitionPerformance
     checkAllAxis(boardMap: BoardMap): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
@@ -28,8 +35,8 @@ export default class Collider implements ColliderInterface {
         tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'column'));
         tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'row'));
 
-        // // check slants // todo: fix that shit
-        // this.checkSlants(boardMap);
+        // // check slants
+        tilesToPurge = tilesToPurge.concat(this.checkSlants(boardMap));
 
         // remove duplicates
         tilesToPurge = Tools.removeArrayDuplicates(tilesToPurge);
@@ -37,6 +44,12 @@ export default class Collider implements ColliderInterface {
         return tilesToPurge;
     }
 
+    /**
+     * Searches horizontally and vertically for balls that can be deleted.
+     * @param boardMap - board map.
+     * @param direction - direction in which board will be searched.
+     * @return tilesArr - list of all balls that can be deleted in selected direction.
+     */
     checkAxis(boardMap: BoardMap, direction: 'column' | 'row'): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
@@ -101,11 +114,17 @@ export default class Collider implements ColliderInterface {
         return tilesToPurge;
     }
 
-    checkSlants(boardMap: BoardMap): BoardMapTileData[] {
+    /**
+     * Searches for balls that can be in a slant.
+     * @param boardMap - board map.
+     * @param x - horizontal coordinate of slant's start.
+     * @param y - vertical coordinate of slant's start.
+     * @param direction - direction towards which slant is leaning.
+     * @return tilesArr - list of all balls that can be deleted in a slant.
+     */
+    checkSlant(boardMap: BoardMap, x: number, y: number, direction: 'left' | 'right' | 1 | -1): BoardMapTileData[] {
+        direction === 'left' ? direction = -1 : direction = 1;
         let tilesToPurge: BoardMapTileData[] = [];
-
-        let x = 0;
-        let y = 0;
 
         let colorOccurrences: number = 1;
 
@@ -114,36 +133,56 @@ export default class Collider implements ColliderInterface {
 
         let pushNext = false;
         let tilesList: BoardMapTileData[] = [tile];
-        while (y < this.board.height - 1) {
-            while (x < this.board.width - 1) {
-                tilesList.push(tile);
 
-                let nextTile = boardMap[y + 1][x + 1];
-                if (tileColor && tileColor === nextTile.color) {
-                    colorOccurrences++;
-                    tilesList.push(nextTile);
+        let loopEngine = direction === 1 ? x < this.board.width - 1 : x > 0
+        while (loopEngine) {
+            // overflow safety
+            if (x + direction > this.board.width - 1 || x + direction < 0 || y + 1 > this.board.height - 1)
+                break;
 
-                    if (colorOccurrences >= GameData.lineToKillLength)
-                        pushNext = true;
+            let nextTile = boardMap[y + 1][x + direction];
+            if (tileColor && tileColor === nextTile.color) {
+                colorOccurrences++;
 
+                tilesList.push(nextTile);
 
-                } else {
-                    colorOccurrences = 1;
-                    tile = boardMap[y + 1][x + 1];
-                    tileColor = tile.color;
-                    tilesList = [tile];
-                }
-
-                if (pushNext) {
-                    pushNext = false;
-                    tilesToPurge = tilesToPurge.concat(tilesList);
-                    tilesList = [];
-                }
-
-                x++;
-                y++;
+                if (colorOccurrences >= GameData.lineToKillLength)
+                    pushNext = true;
+            } else {
+                colorOccurrences = 1;
+                tile = boardMap[y + 1][x + direction];
+                tileColor = tile.color;
+                tilesList = [tile];
             }
+
+            if (pushNext) {
+                pushNext = false;
+                tilesToPurge = tilesToPurge.concat(tilesList);
+                tilesList = [];
+            }
+
+            direction === 1 ? x++ : x--;
+            y++;
         }
+
+        return tilesToPurge;
+    }
+
+    /**
+     * Searches for balls that can be in all slants.
+     * @param boardMap - board map.
+     * @return tilesArr - list of all balls that can be deleted in all slants.
+     */
+    checkSlants(boardMap: BoardMap): BoardMapTileData[] {
+        let tilesToPurge: BoardMapTileData[] = [];
+
+        for (let i = 0; i < this.board.height; i++)
+            for (let j = 0; j < this.board.width; j++)
+                tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, j, i, 1));
+
+        for (let i = 0; i < this.board.height; i++)
+            for (let j = this.board.width - 1; j > 0; j--)
+                tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, j, i, -1));
 
         return tilesToPurge;
     }
