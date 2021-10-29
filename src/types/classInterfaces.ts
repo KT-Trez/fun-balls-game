@@ -12,6 +12,13 @@ export interface BoardInterface {
     startGame: Function;
 }
 
+/** Interface for Collider class. */
+export interface ColliderInterface {
+    checkAllAxis: Function;
+    checkAxis: Function;
+    checkSlants: Function;
+}
+
 /** Interface for Pathfinder class. */
 export interface PathfinderInterface {
     /** Searches for shortest path between start and end points. */

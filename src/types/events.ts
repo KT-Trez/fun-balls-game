@@ -1,4 +1,4 @@
-import { BoardMapTile } from './interfaces';
+import {BoardMapTile} from './interfaces';
 
 /** Custom Event fired when balls are deleted. */
 export interface DeletedBallsEvent extends CustomEvent {

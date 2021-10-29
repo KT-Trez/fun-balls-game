@@ -1,5 +1,5 @@
 import Board from '../classes/Board';
-import { BoardMap, BoardProcess } from '../types/interfaces';
+import {BoardMap, BoardProcess} from '../types/interfaces';
 
 /**
  * Debugging class.

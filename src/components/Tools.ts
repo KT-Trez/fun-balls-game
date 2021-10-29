@@ -22,4 +22,12 @@ export default class Tools {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+
+  /**
+   * Removes duplicated items from array.
+   * @param array
+   */
+  static removeArrayDuplicates(array: any[]): any[] {
+    return array.filter((v,i,a)=>a.findIndex(t=>(JSON.stringify(t) === JSON.stringify(v)))===i);
+  }
 }

@@ -1,8 +1,8 @@
 import Board from './Board';
-import { BoardData, Coordinates, EndPoints, BoardMapTile } from '../types/interfaces';
-import { BoardTilesTypes } from '../types/consts';
-import { DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent } from '../types/events';
-import { RendererInterface } from '../types/classInterfaces';
+import {BoardData, Coordinates, EndPoints, BoardMapTile} from '../types/interfaces';
+import {BoardTilesTypes} from '../types/consts';
+import {DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
+import {RendererInterface} from '../types/classInterfaces';
 
 console.log('Loaded: Renderer.ts');
 

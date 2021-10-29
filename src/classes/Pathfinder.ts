@@ -1,6 +1,6 @@
-import { BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap } from '../types/interfaces';
-import { BoardTilesTypes } from '../types/consts';
-import { PathfinderInterface } from '../types/classInterfaces';
+import {BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap} from '../types/interfaces';
+import {BoardTilesTypes} from '../types/consts';
+import {PathfinderInterface} from '../types/classInterfaces';
 
 console.log('Loaded: Pathfinder.ts');
 

@@ -1,8 +1,9 @@
-import { DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent } from '../types/events';
-import { BoardInterface } from '../types/classInterfaces';
-import { BoardMapTile, BoardMapTileData, Coordinates, EndPoints } from '../types/interfaces';
-import { BoardTilesColors, BoardTilesTypes, GameData } from '../types/consts';
-import { logStart } from '../types/decorators';
+import Collider from './Collider';
+import {DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
+import {BoardInterface} from '../types/classInterfaces';
+import {BoardMapTile, BoardMapTileData, Coordinates, EndPoints} from '../types/interfaces';
+import {BoardTilesColors, BoardTilesTypes} from '../types/consts';
+import {logStart} from '../types/decorators';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
 import Tools from '../components/Tools';
@@ -31,6 +32,8 @@ export default class Board implements BoardInterface {
   /** Points gained by user. */
   private points: number;
 
+  /** Board's collider. */
+  private readonly collider: Collider;
   /** Board's pathfinder. */
   private readonly pathfinder: Pathfinder;
   /** Board's renderer. */
@@ -89,6 +92,7 @@ export default class Board implements BoardInterface {
       y: null
     };
 
+    this.collider = new Collider(this.height, this.width);
     this.pathfinder = new Pathfinder(this.height, this.width);
     this.renderer = new Renderer(this, this.height, this.width);
   }
@@ -97,83 +101,27 @@ export default class Board implements BoardInterface {
    * Checks if there are balls in pattern that can be killed, then kills them.
    * @private
    */
-  private checkBoardThenDeleteBalls() { // todo: optimize
-    let toPurgeArr = [];
+  private checkBoardThenDeleteBalls() {
+    let deepCopyBoardMap = JSON.parse(JSON.stringify(this.boardMap));
+    let tilesToPurge: BoardMapTileData[] = this.collider.checkAllAxis(deepCopyBoardMap);
 
-    // check all rows
-    this.boardMap.forEach((boardTileRow: BoardMapTile[]) => {
-      // select color and set it's occurrences
-      let selectedTileColor = boardTileRow[0].color;
-      let selectedTileColorOccurrences = 0;
-
-      // select next tiles from row
-      for (let i = 0; i < boardTileRow.length; i++) {
-        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
-        if (selectedTileColor && boardTileRow[i].color === selectedTileColor) {
-          selectedTileColorOccurrences++;
-
-          // if occurrences allow to kill row; check how long this row is, then kill it
-          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
-            for (let j = 0; j < this.width; j++) {
-              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
-              let tileInConfirmedRow = boardTileRow[i - (GameData.lineToKillLength - 1) + j];
-              if (i - (GameData.lineToKillLength - 1) + j < this.width && tileInConfirmedRow.color === selectedTileColor)
-                !toPurgeArr.includes(tileInConfirmedRow) ? toPurgeArr.push(tileInConfirmedRow) : null;
-              else
-                break;
-            }
-        } else {
-          selectedTileColor = boardTileRow[i].color;
-          selectedTileColorOccurrences = 1;
-        }
-      }
-    });
-
-    // check all columns
-    for (let i = 0; i < this.width; i++) {
-      // select color
-      let selectedTileColor = this.boardMap[0][i].color;
-      let selectedTileColorOccurrences = 0;
-      // select next tiles from column
-      for (let j = 0; j < this.height; j++) {
-        // if next tile color is the same as selected tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
-        if (selectedTileColor && this.boardMap[j][i].color === selectedTileColor) {
-          selectedTileColorOccurrences++;
-
-          // if occurrences allow to kill column; check how long this row is, then kill it
-          if (selectedTileColorOccurrences >= GameData.lineToKillLength)
-            for (let k = 0; k < this.height; k++) {
-              // check if tile out of index && check if there are another tiles in row && check if tile is already on list to clear
-              if (j - (GameData.lineToKillLength - 1) + k < this.height && this.boardMap[j - (GameData.lineToKillLength - 1) + k][i].color === selectedTileColor)
-                !toPurgeArr.includes(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]) ? toPurgeArr.push(this.boardMap[j - (GameData.lineToKillLength - 1) + k][i]) : null;
-              else
-                break;
-            }
-        } else {
-          selectedTileColor = this.boardMap[j][i].color;
-          selectedTileColorOccurrences = 1;
-        }
-      }
-    }
-
-    // todo: create function that iterates cross
     // kill balls if there are any
-    if (toPurgeArr.length > 0) {
+    if (tilesToPurge.length > 0) {
       // award points
-      this.points += toPurgeArr.length;
+      this.points += tilesToPurge.length;
 
       // create and dispatch custom event to eventInterface, (with points and killed balls array)
       let event: DeletedBallsEvent = new CustomEvent('deletedBalls', {
         detail: {
-          balls: toPurgeArr,
-          points: toPurgeArr.length
+          balls: tilesToPurge,
+          points: tilesToPurge.length
         }
       });
       this.eventInterface.dispatchEvent(event);
 
       // clear balls in boardMap
-      for (let i = 0; i < toPurgeArr.length; i++)
-        this.writeBoardMap(toPurgeArr[i].x, toPurgeArr[i].y, null, BoardTilesTypes.none);
+      for (let i = 0; i < tilesToPurge.length; i++)
+        this.writeBoardMap(tilesToPurge[i].x, tilesToPurge[i].y, null, BoardTilesTypes.none);
     }
   }
 
