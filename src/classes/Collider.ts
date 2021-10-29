@@ -1,9 +1,8 @@
 import {ColliderInterface} from '../types/classInterfaces';
 import {BoardData, BoardMap, BoardMapTileData} from '../types/interfaces';
 import {GameData} from '../types/consts';
+import {measurePerformance} from '../types/decorators';
 import Tools from '../components/Tools';
-import {measurePatternRecognitionPerformance} from '../types/decorators';
-
 
 console.log('Loaded: Collider.ts');
 
@@ -27,7 +26,7 @@ export default class Collider implements ColliderInterface {
      * @param boardMap - board map.
      * @return tilesArr - list of all balls that can be deleted.
      */
-    @measurePatternRecognitionPerformance
+    @measurePerformance('pattern detection')
     checkAllAxis(boardMap: BoardMap): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
@@ -94,13 +93,13 @@ export default class Collider implements ColliderInterface {
                     colorOccurrences++;
 
                     // if occurrences allow to clear axis; check how long this axis is, then clear it
-                    if (colorOccurrences >= GameData.lineToKillLength)
+                    if (colorOccurrences >= GameData.patternLength)
                         for (let k = 0; k < arrDirectionSecond; k++) { // todo: optimize - create list of last tiles; if new tile is encountered, clear it
                             // check if tile out of index && check if there are another tiles in axis
-                            if (direction === 'column' && y - (GameData.lineToKillLength - 1) + k < arrDirectionSecond && boardMap[y - (GameData.lineToKillLength - 1) + k][x].color === tileColor)
-                                !tilesToPurge.includes(boardMap[y - (GameData.lineToKillLength - 1) + k][x]) ? tilesToPurge.push(boardMap[y - (GameData.lineToKillLength - 1) + k][x]) : null;
-                            else if (direction === 'row' && x - (GameData.lineToKillLength - 1) + k < arrDirectionSecond && boardMap[y][x - (GameData.lineToKillLength - 1) + k].color === tileColor)
-                                !tilesToPurge.includes(boardMap[x - (GameData.lineToKillLength - 1) + k][y]) ? tilesToPurge.push(boardMap[y][x - (GameData.lineToKillLength - 1) + k]) : null;
+                            if (direction === 'column' && y - (GameData.patternLength - 1) + k < arrDirectionSecond && boardMap[y - (GameData.patternLength - 1) + k][x].color === tileColor)
+                                !tilesToPurge.includes(boardMap[y - (GameData.patternLength - 1) + k][x]) ? tilesToPurge.push(boardMap[y - (GameData.patternLength - 1) + k][x]) : null;
+                            else if (direction === 'row' && x - (GameData.patternLength - 1) + k < arrDirectionSecond && boardMap[y][x - (GameData.patternLength - 1) + k].color === tileColor)
+                                !tilesToPurge.includes(boardMap[x - (GameData.patternLength - 1) + k][y]) ? tilesToPurge.push(boardMap[y][x - (GameData.patternLength - 1) + k]) : null;
                             else
                                 break;
                         }
@@ -122,8 +121,7 @@ export default class Collider implements ColliderInterface {
      * @param direction - direction towards which slant is leaning.
      * @return tilesArr - list of all balls that can be deleted in a slant.
      */
-    checkSlant(boardMap: BoardMap, x: number, y: number, direction: 'left' | 'right' | 1 | -1): BoardMapTileData[] {
-        direction === 'left' ? direction = -1 : direction = 1;
+    checkSlant(boardMap: BoardMap, x: number, y: number, direction: 1 | -1): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
         let colorOccurrences: number = 1;
@@ -146,7 +144,7 @@ export default class Collider implements ColliderInterface {
 
                 tilesList.push(nextTile);
 
-                if (colorOccurrences >= GameData.lineToKillLength)
+                if (colorOccurrences >= GameData.patternLength)
                     pushNext = true;
             } else {
                 colorOccurrences = 1;

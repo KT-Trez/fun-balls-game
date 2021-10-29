@@ -2,8 +2,8 @@ import Collider from './Collider';
 import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
 import {BoardInterface} from '../types/classInterfaces';
 import {BoardMapTile, BoardMapTileData, Coordinates, EndPoints} from '../types/interfaces';
-import {BoardTilesColors, BoardTilesTypes} from '../types/consts';
-import {logStart} from '../types/decorators';
+import {BoardTilesColors, BoardTilesTypes, GameData} from '../types/consts';
+import {logStart, measurePerformance} from '../types/decorators';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
 import Tools from '../components/Tools';
@@ -28,6 +28,8 @@ export default class Board implements BoardInterface {
 
   /** Map of board tiles. */
   private readonly boardMap: BoardMapTile[][];
+  /** Map of free tiles. */
+  private readonly freeTiles: BoardMapTileData[];
   /** Points gained by user. */
   private points: number;
   /** Timestamp of game start. */
@@ -55,21 +57,28 @@ export default class Board implements BoardInterface {
    * Creates basic board data.
    * @param height - board height.
    * @param width - board width.
+   * @param ballsQuantity - initial balls quantity.
    */
-  constructor(height: number, width: number) {
+  constructor(height: number, width: number, ballsQuantity?: number) {
     this.height = height;
     this.width = width;
 
     this.boardMap = [];
+    this.freeTiles = [];
+
     for (let i: number = 0; i < this.height; i++) {
       let row = [];
-      for (let j: number = 0; j < this.width; j++)
-        row.push({
+      for (let j: number = 0; j < this.width; j++) {
+        let newTile: BoardMapTile = {
           color: null,
           type: BoardTilesTypes.none,
           x: j,
           y: i
-        });
+        };
+
+        this.freeTiles.push(Object.assign({}, newTile));
+        row.push(newTile);
+      }
 
       this.boardMap.push(row);
     }
@@ -79,7 +88,7 @@ export default class Board implements BoardInterface {
     this.startTimestamp = new Date();
 
     this.ballsColorPreview = [];
-    this.generateBallsColorPreview(3);
+    this.generateBallsColorPreview(ballsQuantity ? ballsQuantity : GameData.quantityOfInitialBalls);
 
     this.hasFinish = false;
     this.hasStart = false;
@@ -122,8 +131,10 @@ export default class Board implements BoardInterface {
       this.eventInterface.dispatchEvent(event);
 
       // clear balls in boardMap
-      for (let i = 0; i < tilesToPurge.length; i++)
+      for (let i = 0; i < tilesToPurge.length; i++) {
+        this.updateFreeTiles(tilesToPurge[i].x, tilesToPurge[i].y, tilesToPurge[i].color, 'add');
         this.writeBoardMap(tilesToPurge[i].x, tilesToPurge[i].y, null, BoardTilesTypes.none);
+      }
     }
   }
 
@@ -132,12 +143,12 @@ export default class Board implements BoardInterface {
    * @private
    * @param quantity - balls quantity.
    */
+  @measurePerformance('balls generation')
   private generateBalls(quantity: number): void {
     let initialQuantity = quantity;
     let newBalls: BoardMapTileData[] = [];
     while (quantity) {
-      let freeTile = this.getFreeTiles();
-      let randomTile = freeTile[Tools.getRandomIntInclusive(0, freeTile.length - 1)];
+      let randomTile = this.freeTiles[Tools.getRandomIntInclusive(0, this.freeTiles.length - 1)];
 
       if (this.readBoardMap(randomTile.x, randomTile.y).type === BoardTilesTypes.none) {
         newBalls.push({
@@ -147,12 +158,15 @@ export default class Board implements BoardInterface {
           y: randomTile.y
         });
 
+        this.updateFreeTiles(randomTile.x, randomTile.y, this.ballsColorPreview[quantity - 1], 'delete');
         this.writeBoardMap(randomTile.x, randomTile.y, this.ballsColorPreview[quantity - 1], BoardTilesTypes.obstacle);
         quantity--;
+      } else {
+        console.error(`tile ${randomTile.x} ${randomTile.y} wasn't free`)
       }
 
       // end game if all spaces are taken
-      if (freeTile.length <= 1) {
+      if (this.freeTiles.length <= 0) {
         let event: GameEndedEvent = new CustomEvent('gameEnded', {
           detail: {
             elapsedTime: Date.now() - this.startTimestamp.getTime(),
@@ -200,22 +214,6 @@ export default class Board implements BoardInterface {
   }
 
   /**
-   * Searches for tiles not occupied by balls.
-   * @private
-   * @return freeTiles - list of free tiles.
-   */
-  private getFreeTiles(): BoardMapTileData[] {
-    let freeTiles: BoardMapTileData[] = [];
-    for (let i = 0; i < this.height; i++)
-      for (let j = 0; j < this.width; j++) {
-        let readTile = this.readBoardMap(i, j);
-        if (readTile.type === BoardTilesTypes.none)
-          freeTiles.push(readTile);
-      }
-    return freeTiles;
-  }
-
-  /**
    * Gets the path, from pathfinder, between two points.
    * @param endpoints - start and end points of path.
    */
@@ -243,11 +241,15 @@ export default class Board implements BoardInterface {
       return false;
 
     let startPointData: BoardMapTileData = this.readBoardMap(endpoints.start.x, endpoints.start.y);
+
+    this.updateFreeTiles(endpoints.finish.x, endpoints.finish.y, startPointData.color, 'delete');
+    this.updateFreeTiles(endpoints.start.x, endpoints.start.y, null, 'add');
+
     this.writeBoardMap(endpoints.finish.x, endpoints.finish.y, startPointData.color, startPointData.type);
     this.writeBoardMap(endpoints.start.x, endpoints.start.y, null, BoardTilesTypes.none);
 
     this.checkBoardThenDeleteBalls();
-    this.generateBalls(3);
+    this.generateBalls(GameData.quantityOfRoundBalls);
 
     return true;
   }
@@ -262,6 +264,27 @@ export default class Board implements BoardInterface {
   private readBoardMap(x: number, y: number): BoardMapTile {
     let deepCopyBoardMapTile = JSON.parse(JSON.stringify(this.boardMap));
     return deepCopyBoardMapTile[y][x];
+  }
+
+  /**
+   * Updates freeTiles list.
+   * @private
+   */
+  private updateFreeTiles(x: number, y: number, color: string, action: 'add' | 'delete'): void {
+    if (action === 'add')
+      this.freeTiles.push({
+        color: color,
+        type: BoardTilesTypes.obstacle,
+        x: x,
+        y: y
+      });
+    else {
+      let tileToDelete = this.freeTiles.find(tile => tile.x === x && tile.y === y);
+      if (tileToDelete)
+        this.freeTiles.splice(this.freeTiles.indexOf(tileToDelete), 1);
+      else
+        console.error('Data corrupted!');
+    }
   }
 
   /**

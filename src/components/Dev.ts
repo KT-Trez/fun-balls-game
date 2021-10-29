@@ -100,7 +100,7 @@ export default class Dev {
       if (parseInt(boardX.value) * parseInt(boardY.value) < parseInt(obstaclesCount.value) - 3)
         alert('Too many obstacles.');
 
-      let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value));
+      let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value), parseInt(obstaclesCount.value));
       board.startGame(parseInt(obstaclesCount.value));
     };
   }

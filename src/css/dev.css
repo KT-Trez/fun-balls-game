@@ -1,0 +1,57 @@
+.dev {
+    background-color: #0d46a0;
+    color: #ffffff;
+    width: 90%;
+    border: 2px solid #5471d2;
+    border-radius: 10px;
+    box-sizing: border-box;
+    font-family: 'Roboto', serif;
+    margin: auto;
+    position: absolute;
+    top: 1%;
+    right: 5%;
+}
+
+.dev-title {
+    background-color: #002071;
+    color: #ffffff;
+    width: 100%;
+    border: 1px solid transparent;
+    border-bottom: 1px solid #5471d2;
+    border-radius: 10px 10px 0 0;
+    font-size: 1.5em;
+    font-family: 'Roboto Bold', serif;
+    box-sizing: border-box;
+    padding: 12px 12px 12px 30px;
+}
+
+.dev-inputs {
+    box-sizing: border-box;
+    padding: 30px 30px 25px 10px;
+}
+
+.dev-input, .dev-input--button {
+    background-color: white;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-family: 'Roboto Thin', serif;
+    padding: 7px;
+}
+
+.dev-input:focus {
+    outline: 1px solid #5471d2;
+}
+
+.dev-input--button:hover {
+    background-color: #dedede;
+    color: white;
+}
+
+.dev-input--button:active {
+    transform: translateY(2px);
+}
+
+.dev-label {
+    font-size: 1.2em;
+    margin: 0 5px 0 20px;
+}

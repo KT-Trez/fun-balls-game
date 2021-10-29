@@ -75,11 +75,25 @@ export default class Renderer implements RendererInterface {
     /**
      * Clears recently rendered path between points.
      * @private
+     * @param hasAfterimage - should afterimage of last path be rendered.
+     * @param duration - duration of afterimage in ms.
      */
-    private clearLastRenderedPath(): void {
-        for (let i = 0; i < this.lastRenderedPath.length; i++) {
-            let pathTile = document.querySelector(`[data-x="${this.lastRenderedPath[i].x}"][data-y="${this.lastRenderedPath[i].y}"]`);
-            pathTile.classList.remove('ball--path');
+    private clearLastRenderedPath(hasAfterimage?: boolean, duration?: number): void {
+        let copyLastRenderedPath = [...this.lastRenderedPath];
+        for (let i = 0; i < copyLastRenderedPath.length; i++) {
+            let pathTile = document.querySelector(`[data-x="${copyLastRenderedPath[i].x}"][data-y="${copyLastRenderedPath[i].y}"]`);
+
+            if (!hasAfterimage )
+                pathTile.classList.remove('ball--path');
+            else {
+                pathTile.classList.add('ball--path-afterimage');
+                pathTile.classList.remove('ball--path');
+
+                setTimeout(() => {
+                    for (let i = 0; i < copyLastRenderedPath.length; i++)
+                        pathTile.classList.remove('ball--path-afterimage');
+                }, duration);
+            }
         }
 
         this.lastRenderedPath = [];
@@ -198,6 +212,19 @@ export default class Renderer implements RendererInterface {
      */
     private setTileEvents(tile: HTMLTableCellElement): void {
         tile.onclick = () => {
+            // check if tile can move anywhere
+            // let tableAround = [{x: 0, y: -1}, {x: -1, y:0}, {x:1, y: 0}, {x: 0, y: -1}]; // todo: fix
+            // let takenTiles = 0;
+            //
+            // for (let i = 0; i < tableAround.length; i++)
+            //   if (parseInt(tile.dataset.x) + tableAround[i].x >= 0 && parseInt(tile.dataset.x) + tableAround[i].x < this.board.width && parseInt(tile.dataset.y) + tableAround[i].y >= 0 && parseInt(tile.dataset.y) + tableAround[i].y < this.board.height)
+            //     this.board.instance.getBoardMapTile(parseInt(tile.dataset.x) + tableAround[i].x, parseInt(tile.dataset.y) + tableAround[i].y).type !== BoardTilesTypes.none ? takenTiles++ : null;
+            //   else
+            //     takenTiles++;
+            //
+            // if (takenTiles === 4)
+            //   return;
+
             if (!this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
                 this.endPoints.start = {
                     x: parseInt(tile.dataset.x),
@@ -251,7 +278,7 @@ export default class Renderer implements RendererInterface {
 
                 if (this.board.instance.moveBall(this.endPoints)) {
                     this.selectedStart = null;
-                    this.clearLastRenderedPath();
+                    this.clearLastRenderedPath(true, 500);
                 } else {
                     console.log('[ERROR] Corrupted move. Trying to restore last known layout.');
                     startDOM.appendChild(finishDOM.firstChild);

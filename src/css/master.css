@@ -15,69 +15,53 @@ body {
   background-color: white;
 }
 
+/* navbar */
+.navbar {
+  background-color: #24292e;
+  color: #959da5;
+  height: 15%;
+  width: 100%;
+}
+
+.navbar-title {
+  font-family: 'Roboto Bold', serif;
+  width: 100%;
+  font-size: 1.5em;
+  box-sizing: border-box;
+  padding: 20px 20px 10px 20px;
+}
+
+.navbar-title--info {
+  font-family: Roboto, serif;
+}
+
 /* board */
+#js-display {
+  background-color: #2f363d;
+  height: 85%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .board {
   border-collapse: collapse;
 }
 
 .board__cell {
+  background-color: #39414a;
   height: 40px;
   width: 40px;
-  border: 1px solid gray;
+  border: 1px groove #959da5;
 }
 
 #js-color-preview {
-  height: 60px;
-  width: 160px;
+  height: 40px;
+  width: 120px;
   display: flex;
-  align-items: center;
-  justify-content: space-around;
-}
-
-/* balls */
-.ball {
-  height: 30px;
-  width: 30px;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  margin: auto;
-}
-
-.ball--path {
-  background-color: lightpink;
-}
-
-.ball--selected {
-  height: 35px;
-  width: 35px;
-}
-
-.ball-color--r {
-  background-color: #FF1717;
-}
-
-.ball-color--o {
-  background-color: #FF7F13;
-}
-
-.ball-color--y {
-  background-color: #FAFF31;
-}
-
-.ball-color--g {
-  background-color: #6EFF27;
-}
-
-.ball-color--c {
-  background-color: #41FFDA;
-}
-
-.ball-color--b {
- background-color: #1450FF;
-}
-
-.ball-color--v {
-  background-color: #A10AFF;
+  justify-content: flex-start;
+  margin: 5px 0 0 17px;
 }
 
 /* additional features */

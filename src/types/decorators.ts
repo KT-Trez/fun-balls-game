@@ -5,8 +5,8 @@ export function logStart(target: any, name: string, descriptor: any): void {
     console.log('[INFO] Creating board. Loading data.');
 }
 
-/** Measures time that takes to execute pathfinding algorithm. */
-export function measurePathfindingPerformance(target: object, propertyKey: string, descriptor: PropertyDescriptor) {
+/** Measures time that takes to execute a decorated function. */
+export const measurePerformance = (message: string) => (target: object, propertyKey: string, descriptor: PropertyDescriptor) => {
     const originalMethod = descriptor.value;
 
     descriptor.value = function (...args) {
@@ -14,21 +14,7 @@ export function measurePathfindingPerformance(target: object, propertyKey: strin
         const result = originalMethod.apply(this, args);
         const finish = performance.now();
 
-        console.log(`[INFO] Pathfinding took: ${finish - start} milliseconds.`);
-        return result;
-    };
-}
-
-/** Measures time that takes to check all balls patterns. */
-export function measurePatternRecognitionPerformance(target: object, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = function (...args) {
-        const start = performance.now();
-        const result = originalMethod.apply(this, args);
-        const finish = performance.now();
-
-        console.log(`[INFO] Searching pattern took: ${finish - start} milliseconds.`);
+        console.log(`[INFO] Module { ${message} } took: ${finish - start} ms.`);
         return result;
     };
 }

@@ -11,20 +11,24 @@
 <body>
 
   <!-- enable input area from dev options -->
-  <div id="js-custom-input" class="js-hide">
-    <label for="js-board__x">x</label>
-    <input id="js-board__x" type="number" value="10">
-    <label for="js-board__y">y</label>
-    <input id="js-board__y" type="number" value="10">
+  <div id="js-custom-input" class="dev js-hide">
+    <p class="dev-title">Dev options</p>
+    <div class="dev-inputs">
+      <label class="dev-label" for="js-board__x">Szerokość:</label>
+      <input id="js-board__x" class="dev-input" type="number" value="10">
+      <label class="dev-label" for="js-board__y">Wysokość:</label>
+      <input id="js-board__y" class="dev-input" type="number" value="10">
 
-    <label for="js-board__obstacles">Przeszkody</label>
-    <input id="js-board__obstacles" type="number" value="3">
-    <button id="js-board__generate" type="button">Generuj</button>
+      <label class="dev-label" for="js-board__obstacles">Przeszkody:</label>
+      <input id="js-board__obstacles" class="dev-input" type="number" value="3">
+      <button id="js-board__generate" class="dev-input--button" type="button">Generuj</button>
+    </div>
   </div>
 
-  <div>
+  <!-- navbar -->
+  <div class="navbar">
+    <div class="navbar-title">Zdobyte punkty: <span id="js-points-count" class="navbar-title--info">0</span></div>
     <div id="js-color-preview"></div>
-    <div>Zdobyte punkty: <span id="js-points-count">0</span></div>
   </div>
 
   <!-- main element to display content -->

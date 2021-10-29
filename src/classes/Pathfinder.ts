@@ -1,6 +1,6 @@
 import {BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap} from '../types/interfaces';
 import {BoardTilesTypes} from '../types/consts';
-import {measurePathfindingPerformance} from '../types/decorators';
+import {measurePerformance} from '../types/decorators';
 import {PathfinderInterface} from '../types/classInterfaces';
 
 console.log('Loaded: Pathfinder.ts');
@@ -12,6 +12,8 @@ console.log('Loaded: Pathfinder.ts');
 export default class Pathfinder implements PathfinderInterface {
     /** Board height and width. */
     private readonly board: BoardData;
+    /** Flag that turns on/off debug logs. */
+    private readonly debugMode: boolean;
     /** Array with offset data. Useful while searching tiles around a selected tile. */
     private readonly searchOffsetArr: Array<Coordinates>;
 
@@ -32,6 +34,8 @@ export default class Pathfinder implements PathfinderInterface {
             height: height,
             width: width
         };
+        // debug flag
+        this.debugMode = false;
 
         // offset which will be search around selected
         this.searchOffsetArr = [
@@ -90,7 +94,7 @@ export default class Pathfinder implements PathfinderInterface {
      * @param board - board array.
      * @return shortestPath - array with shortest path.
      */
-    @measurePathfindingPerformance
+    @measurePerformance('pathfinding')
     findPath(board: BoardMap): Array<Coordinates> {
         // create new array of boardProcess objects - coordinates and other tile data (BoardProcessTile)
         let boardProcess: BoardProcess = [];
@@ -122,7 +126,7 @@ export default class Pathfinder implements PathfinderInterface {
                         this.start = boardProcess[i][j];
                         break;
                     default:
-                        console.log('[ERROR] Board corrupted. ' + `x: ${i} y: ${j}, type: ${board[i][j]}`, board);
+                        console.error('[ERROR] Board corrupted. ' + `x: ${i} y: ${j}, type: ${board[i][j]}`, board);
                 }
             }
         }
@@ -220,11 +224,16 @@ export default class Pathfinder implements PathfinderInterface {
 
             // check if there is next tile or path is blocked by obstacles
             if (lastTile === lastTileBeforeSearch) {
-                console.log('[WARNING] Hovered tile cannot be accessed.');
+                if (this.debugMode)
+                    console.log('[DEBUG] Hovered tile cannot be accessed.');
+
                 pathCreated = true;
                 return [];
             }
         }
+
+        if (this.debugMode)
+            console.log('[DEBUG] Shortest path length:', pathArr.length);
 
         // return shortest path
         return pathArr;
