@@ -1,5 +1,6 @@
 import {BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap} from '../types/interfaces';
 import {BoardTilesTypes} from '../types/consts';
+import {measurePathfindingPerformance} from '../types/decorators';
 import {PathfinderInterface} from '../types/classInterfaces';
 
 console.log('Loaded: Pathfinder.ts');
@@ -89,6 +90,7 @@ export default class Pathfinder implements PathfinderInterface {
      * @param board - board array.
      * @return shortestPath - array with shortest path.
      */
+    @measurePathfindingPerformance
     findPath(board: BoardMap): Array<Coordinates> {
         // create new array of boardProcess objects - coordinates and other tile data (BoardProcessTile)
         let boardProcess: BoardProcess = [];

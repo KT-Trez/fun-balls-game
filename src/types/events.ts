@@ -10,6 +10,18 @@ export interface DeletedBallsEvent extends CustomEvent {
     };
 }
 
+/** Custom Event fired when game ends. */
+export interface GameEndedEvent extends CustomEvent {
+    detail: {
+        /** Time elapsed from start to finish of the game. */
+        elapsedTime: number;
+        /** Last balls that should be rendered. */
+        lastBalls: BoardMapTile[];
+        /** All points earned by a player. */
+        points: number;
+    };
+}
+
 /** Custom Event fired when new balls are generated on the board. */
 export interface GeneratedBallsEvent extends CustomEvent {
     /** Generated balls. */

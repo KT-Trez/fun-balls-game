@@ -1,5 +1,5 @@
 import Collider from './Collider';
-import {DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
+import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
 import {BoardInterface} from '../types/classInterfaces';
 import {BoardMapTile, BoardMapTileData, Coordinates, EndPoints} from '../types/interfaces';
 import {BoardTilesColors, BoardTilesTypes} from '../types/consts';
@@ -7,7 +7,6 @@ import {logStart} from '../types/decorators';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';
 import Tools from '../components/Tools';
-import Dev from '../components/Dev';
 
 console.log('Loaded: Board.ts');
 
@@ -31,6 +30,8 @@ export default class Board implements BoardInterface {
   private readonly boardMap: BoardMapTile[][];
   /** Points gained by user. */
   private points: number;
+  /** Timestamp of game start. */
+  private startTimestamp: Date;
 
   /** Board's collider. */
   private readonly collider: Collider;
@@ -75,6 +76,7 @@ export default class Board implements BoardInterface {
 
     this.eventInterface = new EventTarget();
     this.points = 0;
+    this.startTimestamp = new Date();
 
     this.ballsColorPreview = [];
     this.generateBallsColorPreview(3);
@@ -133,20 +135,33 @@ export default class Board implements BoardInterface {
   private generateBalls(quantity: number): void {
     let initialQuantity = quantity;
     let newBalls: BoardMapTileData[] = [];
-    while (quantity) { // TODO: can generate only on free tiles && game can end
-      let randomX: number = Tools.getRandomIntInclusive(0, this.height - 1);
-      let randomY: number = Tools.getRandomIntInclusive(0, this.width - 1);
+    while (quantity) {
+      let freeTile = this.getFreeTiles();
+      let randomTile = freeTile[Tools.getRandomIntInclusive(0, freeTile.length - 1)];
 
-      if (this.readBoardMap(randomX, randomY).type === BoardTilesTypes.none) {
+      if (this.readBoardMap(randomTile.x, randomTile.y).type === BoardTilesTypes.none) {
         newBalls.push({
           color: this.ballsColorPreview[quantity - 1],
           type: BoardTilesTypes.obstacle,
-          x: randomX,
-          y: randomY
+          x: randomTile.x,
+          y: randomTile.y
         });
 
-        this.writeBoardMap(randomX, randomY, this.ballsColorPreview[quantity - 1], BoardTilesTypes.obstacle);
+        this.writeBoardMap(randomTile.x, randomTile.y, this.ballsColorPreview[quantity - 1], BoardTilesTypes.obstacle);
         quantity--;
+      }
+
+      // end game if all spaces are taken
+      if (freeTile.length <= 1) {
+        let event: GameEndedEvent = new CustomEvent('gameEnded', {
+          detail: {
+            elapsedTime: Date.now() - this.startTimestamp.getTime(),
+            lastBalls: newBalls,
+            points: this.points
+          }
+        });
+        this.eventInterface.dispatchEvent(event);
+        return;
       }
     }
     this.generateBallsColorPreview(initialQuantity);
@@ -185,6 +200,22 @@ export default class Board implements BoardInterface {
   }
 
   /**
+   * Searches for tiles not occupied by balls.
+   * @private
+   * @return freeTiles - list of free tiles.
+   */
+  private getFreeTiles(): BoardMapTileData[] {
+    let freeTiles: BoardMapTileData[] = [];
+    for (let i = 0; i < this.height; i++)
+      for (let j = 0; j < this.width; j++) {
+        let readTile = this.readBoardMap(i, j);
+        if (readTile.type === BoardTilesTypes.none)
+          freeTiles.push(readTile);
+      }
+    return freeTiles;
+  }
+
+  /**
    * Gets the path, from pathfinder, between two points.
    * @param endpoints - start and end points of path.
    */
@@ -218,7 +249,6 @@ export default class Board implements BoardInterface {
     this.checkBoardThenDeleteBalls();
     this.generateBalls(3);
 
-    Dev.logBoardMap(this.boardMap, 'color');
     return true;
   }
 

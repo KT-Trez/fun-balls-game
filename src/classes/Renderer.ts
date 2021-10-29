@@ -1,7 +1,7 @@
 import Board from './Board';
 import {BoardData, Coordinates, EndPoints, BoardMapTile} from '../types/interfaces';
 import {BoardTilesTypes} from '../types/consts';
-import {DeletedBallsEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
+import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
 import {RendererInterface} from '../types/classInterfaces';
 
 console.log('Loaded: Renderer.ts');
@@ -67,7 +67,7 @@ export default class Renderer implements RendererInterface {
      * @private
      * @param balls - balls to un-render.
      */
-    private static clearDeletedBalls(balls): void { // todo: add decorator
+    private static clearDeletedBalls(balls): void {
         for (let i = 0; i < balls.length; i++)
             document.querySelector(`[data-x="${balls[i].x}"][data-y="${balls[i].y}"]`).firstChild.remove();
     }
@@ -163,13 +163,25 @@ export default class Renderer implements RendererInterface {
             pointsCountDOM.innerText = (parseInt(pointsCountDOM.innerText) + event.detail.points).toString();
         });
 
+        this.board.instance.eventInterface.addEventListener('gameEnded', (event: GameEndedEvent) => {
+            this.clearLastRenderedPath();
+            Renderer.renderBalls(event.detail.lastBalls);
+            Array.from(document.getElementsByTagName('td')).forEach(tile => {
+                tile.onclick = null;
+                tile.onmouseenter = null;
+                tile.onmouseout = null;
+            });
+
+            console.log('[INFO] Game lasted: ' + `${Math.round(event.detail.elapsedTime / 3600000 )}h ${Math.round(event.detail.elapsedTime / 60000)}m ${Math.round(event.detail.elapsedTime / 1000)}s`);
+            alert('Koniec gry. Twój wynik to: ' + event.detail.points);
+        });
+
         this.board.instance.eventInterface.addEventListener('generatedBalls', (event: GeneratedBallsEvent) => Renderer.renderBalls(event.detail));
 
         this.board.instance.eventInterface.addEventListener('previewedBalls', (event: PreviewedBallsEvent) => {
             let colorPreviewDOM = document.getElementById('js-color-preview');
             while (colorPreviewDOM.firstChild)
                 colorPreviewDOM.removeChild(colorPreviewDOM.firstChild);
-
 
             for (let i = 0; i < event.detail.length; i++) {
                 let ballDOM = document.createElement('div');

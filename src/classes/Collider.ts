@@ -25,8 +25,11 @@ export default class Collider implements ColliderInterface {
         let tilesToPurge: BoardMapTileData[] = [];
 
         // check columns and rows
-        tilesToPurge.concat(this.checkAxis(boardMap, 'column'));
+        tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'column'));
         tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'row'));
+
+        // // check slants // todo: fix that shit
+        // this.checkSlants(boardMap);
 
         // remove duplicates
         tilesToPurge = Tools.removeArrayDuplicates(tilesToPurge);
@@ -98,20 +101,50 @@ export default class Collider implements ColliderInterface {
         return tilesToPurge;
     }
 
-    checkSlants(boardMap: BoardMapTileData[], offset: number): BoardMapTileData[] {
+    checkSlants(boardMap: BoardMap): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
-        //
-        // for (let i = 0; i < this.board.height; i--) {
-        //     let colorOccurrences: number = 1;
-        //     let tileColor: string = boardMap[i][this.board.width - GameData.lineToKillLength].color;
-        //     let tilesList: BoardMapTileData[] = [];
-        //
-        //     for (let j = 0; j < this.board.height; j++) {
-        //         if ()
-        //
-        //     }
-        // }
-        //
+
+        let x = 0;
+        let y = 0;
+
+        let colorOccurrences: number = 1;
+
+        let tile: BoardMapTileData = boardMap[y][x];
+        let tileColor: string = tile.color;
+
+        let pushNext = false;
+        let tilesList: BoardMapTileData[] = [tile];
+        while (y < this.board.height - 1) {
+            while (x < this.board.width - 1) {
+                tilesList.push(tile);
+
+                let nextTile = boardMap[y + 1][x + 1];
+                if (tileColor && tileColor === nextTile.color) {
+                    colorOccurrences++;
+                    tilesList.push(nextTile);
+
+                    if (colorOccurrences >= GameData.lineToKillLength)
+                        pushNext = true;
+
+
+                } else {
+                    colorOccurrences = 1;
+                    tile = boardMap[y + 1][x + 1];
+                    tileColor = tile.color;
+                    tilesList = [tile];
+                }
+
+                if (pushNext) {
+                    pushNext = false;
+                    tilesToPurge = tilesToPurge.concat(tilesList);
+                    tilesList = [];
+                }
+
+                x++;
+                y++;
+            }
+        }
+
         return tilesToPurge;
     }
 }
