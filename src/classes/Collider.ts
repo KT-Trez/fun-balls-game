@@ -132,7 +132,7 @@ export default class Collider implements ColliderInterface {
         let pushNext = false;
         let tilesList: BoardMapTileData[] = [tile];
 
-        let loopEngine = direction === 1 ? x < this.board.width - 1 : x > 0
+        let loopEngine = this.board.width - 1
         while (loopEngine) {
             // overflow safety
             if (x + direction > this.board.width - 1 || x + direction < 0 || y + 1 > this.board.height - 1)
@@ -174,13 +174,15 @@ export default class Collider implements ColliderInterface {
     checkSlants(boardMap: BoardMap): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
-        for (let i = 0; i < this.board.height; i++)
-            for (let j = 0; j < this.board.width; j++)
-                tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, j, i, 1));
+        for (let i = 0; i < this.board.width - GameData.patternLength; i++) {
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, 1));
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, this.board.width - 1, this.board.height - GameData.patternLength - i, -1));
+        }
 
-        for (let i = 0; i < this.board.height; i++)
-            for (let j = this.board.width - 1; j > 0; j--)
-                tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, j, i, -1));
+        for (let i = 0; i < this.board.height; i++) {
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, 0, i, 1));
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, -1));
+        }
 
         return tilesToPurge;
     }

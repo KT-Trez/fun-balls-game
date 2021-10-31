@@ -40,7 +40,7 @@ export const BoardTilesTypes = {
 
 /** Additional game data. */
 export const GameData = {
-    patternLength: 5,
+    patternLength: 3,
     /** Initial balls quantity. */
     quantityOfInitialBalls: 3,
     /** How many new balls should be generated in next round. */

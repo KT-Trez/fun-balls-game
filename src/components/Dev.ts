@@ -102,6 +102,8 @@ export default class Dev {
 
       let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value), parseInt(obstaclesCount.value));
       board.startGame(parseInt(obstaclesCount.value));
+
+      document.getElementById('js-custom-input').classList.add('js-hide');
     };
   }
 }

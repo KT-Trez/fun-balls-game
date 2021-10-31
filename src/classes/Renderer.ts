@@ -286,6 +286,25 @@ export default class Renderer implements RendererInterface {
             }
         };
 
+        tile.oncontextmenu = (event) => {
+            event.preventDefault();
+
+            Object.assign(this.endPoints, {
+                start: null,
+                end: null
+            });
+
+            this.renderPathFlag = false;
+
+            if (this.selectedStart) {
+                this.selectedStart.children[0].classList.remove('ball--selected');
+                this.selectedStart = null;
+            }
+
+            this.clearLastRenderedPath();
+        };
+        document.getElementById('js-display').oncontextmenu = tile.oncontextmenu;
+
         tile.onmouseenter = () => {
             if (this.renderPathFlag)
                 this.renderPath(tile);
