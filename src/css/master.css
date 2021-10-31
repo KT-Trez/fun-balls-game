@@ -19,16 +19,21 @@ body {
 .navbar {
   background-color: #24292e;
   color: #959da5;
-  height: 15%;
+  height: 17%;
   width: 100%;
 }
 
-.navbar-title {
+.navbar-title, .navbar-subtitle {
+  width: 50vw;
   font-family: 'Roboto Bold', serif;
-  width: 100%;
-  font-size: 1.5em;
+  font-size: 3vh;
   box-sizing: border-box;
-  padding: 20px 20px 10px 20px;
+  padding: 20px 20px 5px 20px;
+}
+
+.navbar-subtitle {
+  font-size: 2.4vh;
+  padding: 5px 20px 10px 20px
 }
 
 .navbar-title--info {
@@ -38,7 +43,7 @@ body {
 /* board */
 #js-display {
   background-color: #2f363d;
-  height: 85%;
+  height: 83%;
   width: 100%;
   display: flex;
   align-items: center;
@@ -61,7 +66,7 @@ body {
   width: 120px;
   display: flex;
   justify-content: flex-start;
-  margin: 5px 0 0 17px;
+  margin: 5px 0 0 16px;
 }
 
 /* additional features */

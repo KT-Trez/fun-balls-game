@@ -10,6 +10,9 @@ import './css/balls.css';
 import './css/dev.css';
 
 window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('balls_record'))
+    document.getElementById('js-points-record').innerText = localStorage.getItem('balls_record');
+
   let board: Board = new Board(9, 9);
   board.startGame(GameData.quantityOfInitialBalls);
 });

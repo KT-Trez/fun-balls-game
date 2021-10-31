@@ -1,5 +1,5 @@
 import {ColliderInterface} from '../types/classInterfaces';
-import {BoardData, BoardMap, BoardMapTileData} from '../types/interfaces';
+import {BoardData, BoardMapTileData} from '../types/interfaces';
 import {GameData} from '../types/consts';
 import {measurePerformance} from '../types/decorators';
 import Tools from '../components/Tools';
@@ -27,14 +27,14 @@ export default class Collider implements ColliderInterface {
      * @return tilesArr - list of all balls that can be deleted.
      */
     @measurePerformance('pattern detection')
-    checkAllAxis(boardMap: BoardMap): BoardMapTileData[] {
+    checkAllAxis(boardMap: BoardMapTileData[]): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
         // check columns and rows
         tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'column'));
         tilesToPurge = tilesToPurge.concat(this.checkAxis(boardMap, 'row'));
 
-        // // check slants
+        // check slants
         tilesToPurge = tilesToPurge.concat(this.checkSlants(boardMap));
 
         // remove duplicates
@@ -49,7 +49,7 @@ export default class Collider implements ColliderInterface {
      * @param direction - direction in which board will be searched.
      * @return tilesArr - list of all balls that can be deleted in selected direction.
      */
-    checkAxis(boardMap: BoardMap, direction: 'column' | 'row'): BoardMapTileData[] {
+    checkAxis(boardMap: BoardMapTileData[], direction: 'column' | 'row'): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
         // set boardMap axis to search
@@ -67,16 +67,21 @@ export default class Collider implements ColliderInterface {
         }
 
         for (let i = 0; i < arrDirectionFirst; i++) {
-            // select color and set it's occurrences
+            // select tile, it's color and set color's occurrences
             let colorOccurrences = 0;
-            let tileColor: string = direction === 'column' ? boardMap[0][i].color : boardMap[i][0].color;
+
+            let tile: BoardMapTileData = direction === 'column' ? boardMap[0][i] : boardMap[i][0];
+            let tileColor: string = tile.color;
+
+            // set flag that checks if tilesList should be merged with tilesToPurge
+            let pushNext = false;
+            let tilesList: BoardMapTileData[] = [];
 
             // select next tiles from axis
             for (let j = 0; j < arrDirectionSecond; j++) {
                 // set boardMap coordinates variables
                 let x: number;
                 let y: number;
-
                 switch (direction) {
                     case 'column':
                         x = i;
@@ -88,25 +93,29 @@ export default class Collider implements ColliderInterface {
                         break;
                 }
 
-                // if next tile's color is the same as last tile's, increase occurrences and continue check, else select new color and set it's occurrences to 0
-                if (tileColor && boardMap[y][x].color === tileColor) {
+                // select next tile, check if it has the same color as last; increase color occurrences and continue check or else select new color and repeat
+                let nextTile = boardMap[y][x];
+                if (tileColor && nextTile.color === tileColor) {
                     colorOccurrences++;
 
-                    // if occurrences allow to clear axis; check how long this axis is, then clear it
+                    tilesList.push(nextTile);
+
+                    // set merging flag to true, when occurrences match set length
                     if (colorOccurrences >= GameData.patternLength)
-                        for (let k = 0; k < arrDirectionSecond; k++) { // todo: optimize - create list of last tiles; if new tile is encountered, clear it
-                            // check if tile out of index && check if there are another tiles in axis
-                            if (direction === 'column' && y - (GameData.patternLength - 1) + k < arrDirectionSecond && boardMap[y - (GameData.patternLength - 1) + k][x].color === tileColor)
-                                !tilesToPurge.includes(boardMap[y - (GameData.patternLength - 1) + k][x]) ? tilesToPurge.push(boardMap[y - (GameData.patternLength - 1) + k][x]) : null;
-                            else if (direction === 'row' && x - (GameData.patternLength - 1) + k < arrDirectionSecond && boardMap[y][x - (GameData.patternLength - 1) + k].color === tileColor)
-                                !tilesToPurge.includes(boardMap[x - (GameData.patternLength - 1) + k][y]) ? tilesToPurge.push(boardMap[y][x - (GameData.patternLength - 1) + k]) : null;
-                            else
-                                break;
-                        }
+                        pushNext = true;
                 } else {
+                    // reset all values
                     colorOccurrences = 1;
-                    tileColor = boardMap[y][x].color;
+                    tile = boardMap[y][x]
+                    tileColor = tile.color;
+
+                    pushNext = false;
+                    tilesList = [tile];
                 }
+
+                // merge tilesList to tilesToPurge
+                if (pushNext)
+                    tilesToPurge = tilesToPurge.concat(tilesList);
             }
         }
 
@@ -119,46 +128,53 @@ export default class Collider implements ColliderInterface {
      * @param x - horizontal coordinate of slant's start.
      * @param y - vertical coordinate of slant's start.
      * @param direction - direction towards which slant is leaning.
+     * @param max - max height or width that loop will iterate over.
      * @return tilesArr - list of all balls that can be deleted in a slant.
      */
-    checkSlant(boardMap: BoardMap, x: number, y: number, direction: 1 | -1): BoardMapTileData[] {
+    checkSlant(boardMap: BoardMapTileData[], x: number, y: number, direction: 1 | -1, max: number): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
+        // select tile, it's color and set color's occurrences
         let colorOccurrences: number = 1;
 
         let tile: BoardMapTileData = boardMap[y][x];
         let tileColor: string = tile.color;
 
+        // set flag that checks if tilesList should be merged with tilesToPurge
         let pushNext = false;
         let tilesList: BoardMapTileData[] = [tile];
 
-        let loopEngine = this.board.width - 1
-        while (loopEngine) {
+        while (max) {
             // overflow safety
             if (x + direction > this.board.width - 1 || x + direction < 0 || y + 1 > this.board.height - 1)
                 break;
 
+            // select next tile, check if it has the same color as last; increase color occurrences and continue check or else select new color and repeat
             let nextTile = boardMap[y + 1][x + direction];
             if (tileColor && tileColor === nextTile.color) {
                 colorOccurrences++;
 
                 tilesList.push(nextTile);
 
+                // set merging flag to true, when occurrences match set length
                 if (colorOccurrences >= GameData.patternLength)
                     pushNext = true;
             } else {
+                // reset all values
                 colorOccurrences = 1;
                 tile = boardMap[y + 1][x + direction];
                 tileColor = tile.color;
                 tilesList = [tile];
             }
 
+            // merge tilesList to tilesToPurge
             if (pushNext) {
                 pushNext = false;
                 tilesToPurge = tilesToPurge.concat(tilesList);
                 tilesList = [];
             }
 
+            // increment coordinates values
             direction === 1 ? x++ : x--;
             y++;
         }
@@ -171,17 +187,17 @@ export default class Collider implements ColliderInterface {
      * @param boardMap - board map.
      * @return tilesArr - list of all balls that can be deleted in all slants.
      */
-    checkSlants(boardMap: BoardMap): BoardMapTileData[] {
+    checkSlants(boardMap: BoardMapTileData[]): BoardMapTileData[] {
         let tilesToPurge: BoardMapTileData[] = [];
 
-        for (let i = 0; i < this.board.width - GameData.patternLength; i++) {
-            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, 1));
-            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, this.board.width - 1, this.board.height - GameData.patternLength - i, -1));
+        for (let i = 0; i < this.board.width - (GameData.patternLength - 1); i++) {
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, 1, this.board.width - 1));
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, this.board.width - 1, this.board.height - GameData.patternLength - i, -1, this.board.height - 1));
         }
 
         for (let i = 0; i < this.board.height; i++) {
-            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, 0, i, 1));
-            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, -1));
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, 0, i, 1, this.board.width - 1));
+            tilesToPurge = tilesToPurge.concat(this.checkSlant(boardMap, i, 0, -1, this.board.height - 1));
         }
 
         return tilesToPurge;

@@ -1,5 +1,5 @@
 import Board from './Board';
-import {BoardData, Coordinates, EndPoints, BoardMapTile} from '../types/interfaces';
+import {BoardData, Coordinates, EndPoints, BoardMapTile, BoardMapTileData} from '../types/interfaces';
 import {BoardTilesTypes} from '../types/consts';
 import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
 import {RendererInterface} from '../types/classInterfaces';
@@ -67,7 +67,7 @@ export default class Renderer implements RendererInterface {
      * @private
      * @param balls - balls to un-render.
      */
-    private static clearDeletedBalls(balls): void {
+    private static clearDeletedBalls(balls: BoardMapTileData[]): void {
         for (let i = 0; i < balls.length; i++)
             document.querySelector(`[data-x="${balls[i].x}"][data-y="${balls[i].y}"]`).firstChild.remove();
     }
@@ -212,18 +212,17 @@ export default class Renderer implements RendererInterface {
      */
     private setTileEvents(tile: HTMLTableCellElement): void {
         tile.onclick = () => {
-            // check if tile can move anywhere
-            // let tableAround = [{x: 0, y: -1}, {x: -1, y:0}, {x:1, y: 0}, {x: 0, y: -1}]; // todo: fix
-            // let takenTiles = 0;
-            //
-            // for (let i = 0; i < tableAround.length; i++)
-            //   if (parseInt(tile.dataset.x) + tableAround[i].x >= 0 && parseInt(tile.dataset.x) + tableAround[i].x < this.board.width && parseInt(tile.dataset.y) + tableAround[i].y >= 0 && parseInt(tile.dataset.y) + tableAround[i].y < this.board.height)
-            //     this.board.instance.getBoardMapTile(parseInt(tile.dataset.x) + tableAround[i].x, parseInt(tile.dataset.y) + tableAround[i].y).type !== BoardTilesTypes.none ? takenTiles++ : null;
-            //   else
-            //     takenTiles++;
-            //
-            // if (takenTiles === 4)
-            //   return;
+            let tableAround = [{x: 0, y: -1}, {x: -1, y: 0}, {x: 1, y: 0}, {x: 0, y: 1}];
+            let takenTiles = 0;
+
+            for (let i = 0; i < tableAround.length; i++)
+              if (parseInt(tile.dataset.x) + tableAround[i].x >= 0 && parseInt(tile.dataset.x) + tableAround[i].x < this.board.width && parseInt(tile.dataset.y) + tableAround[i].y >= 0 && parseInt(tile.dataset.y) + tableAround[i].y < this.board.height)
+                  this.board.instance.getBoardMapTile(parseInt(tile.dataset.x) + tableAround[i].x, parseInt(tile.dataset.y) + tableAround[i].y).type !== BoardTilesTypes.none ? takenTiles++ : null;
+              else
+                takenTiles++;
+
+            if (takenTiles === 4 && !this.selectedStart)
+              return;
 
             if (!this.selectedStart && this.board.instance.getBoardMapTile(parseInt(tile.dataset.x), parseInt(tile.dataset.y)).type !== BoardTilesTypes.none) {
                 this.endPoints.start = {

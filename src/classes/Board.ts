@@ -167,6 +167,10 @@ export default class Board implements BoardInterface {
 
       // end game if all spaces are taken
       if (this.freeTiles.length <= 0) {
+        let record = localStorage.getItem('balls_record');
+        if (!record || this.points > parseInt(record))
+          localStorage.setItem('balls_record', this.points.toString());
+
         let event: GameEndedEvent = new CustomEvent('gameEnded', {
           detail: {
             elapsedTime: Date.now() - this.startTimestamp.getTime(),

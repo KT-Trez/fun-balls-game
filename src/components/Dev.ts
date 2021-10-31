@@ -95,10 +95,10 @@ export default class Dev {
 
     document.getElementById('js-board__generate').onclick = () => {
       if (parseInt(boardX.value) < 5 && parseInt(boardY.value) < 5)
-        alert('Board to small.');
+        return alert('Board to small.');
 
       if (parseInt(boardX.value) * parseInt(boardY.value) < parseInt(obstaclesCount.value) - 3)
-        alert('Too many obstacles.');
+        return alert('Too many obstacles.');
 
       let board: Board = new Board(parseInt(boardX.value), parseInt(boardY.value), parseInt(obstaclesCount.value));
       board.startGame(parseInt(obstaclesCount.value));
