@@ -1,8 +1,8 @@
 import Board from './Board';
 import {BoardData, Coordinates, EndPoints, BoardMapTile, BoardMapTileData} from '../types/interfaces';
-import {BoardTilesTypes} from '../types/consts';
+import {BoardTilesTypes} from '../config';
 import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
-import {RendererInterface} from '../types/classInterfaces';
+import {RendererInterface} from '../types/classes-interfaces';
 
 console.log('Loaded: Renderer.ts');
 
@@ -100,7 +100,7 @@ export default class Renderer implements RendererInterface {
     }
 
     /**
-     * Generates new DOM board with height and width set in class object.
+     * Generates new board with height and width set in class object, then appends it to the DOM.
      */
     renderBoard(): void {
         let boardDOM: HTMLTableElement = document.createElement('table');

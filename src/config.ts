@@ -1,4 +1,4 @@
-/** All colors of board tiles. */
+/** All colors of board's tiles. */
 export const BoardTilesColors = [
     {
         id: 'r',

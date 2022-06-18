@@ -5,13 +5,13 @@ import Board from '../classes/Board';
  * @extends Coordinates
  */
 export interface BoardProcessTile extends Coordinates {
-    /** Number of next step while pathfinding from start to finish. */
+    /** Index of next step while pathfinding from start to finish. */
     pathHelper?: number;
 
     /** Type of tile. */
     type?: string;
 
-    /** Had tile, assigned pathHelper. */
+    /** Whether tile has already assigned path's algorithm data or not. */
     wasSearched: boolean;
 }
 

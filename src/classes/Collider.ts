@@ -1,6 +1,6 @@
-import {ColliderInterface} from '../types/classInterfaces';
+import {ColliderInterface} from '../types/classes-interfaces';
 import {BoardData, BoardMapTileData} from '../types/interfaces';
-import {GameData} from '../types/consts';
+import {GameData} from '../config';
 import {measurePerformance} from '../types/decorators';
 import Tools from '../components/Tools';
 

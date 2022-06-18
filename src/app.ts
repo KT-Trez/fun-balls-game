@@ -1,5 +1,5 @@
 import Board from './classes/Board';
-import {GameData} from './types/consts';
+import {GameData} from './config';
 
 console.log('Loaded: app.ts');
 

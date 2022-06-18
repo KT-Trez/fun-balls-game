@@ -1,8 +1,8 @@
 import Collider from './Collider';
 import {DeletedBallsEvent, GameEndedEvent, GeneratedBallsEvent, PreviewedBallsEvent} from '../types/events';
-import {BoardInterface} from '../types/classInterfaces';
+import {BoardInterface} from '../types/classes-interfaces';
 import {BoardMapTile, BoardMapTileData, Coordinates, EndPoints} from '../types/interfaces';
-import {BoardTilesColors, BoardTilesTypes, GameData} from '../types/consts';
+import {BoardTilesColors, BoardTilesTypes, GameData} from '../config';
 import {logStart, measurePerformance} from '../types/decorators';
 import Pathfinder from './Pathfinder';
 import Renderer from './Renderer';

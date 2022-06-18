@@ -1,13 +1,13 @@
 import {BoardProcess, BoardProcessTile, BoardData, Coordinates, BoardMap} from '../types/interfaces';
-import {BoardTilesTypes} from '../types/consts';
+import {BoardTilesTypes} from '../config';
 import {measurePerformance} from '../types/decorators';
-import {PathfinderInterface} from '../types/classInterfaces';
+import {PathfinderInterface} from '../types/classes-interfaces';
 
 console.log('Loaded: Pathfinder.ts');
 
 
 /**
- * Class to calculate shortest path between start and finish.
+ * Class to calculate the shortest path between start and finish.
  */
 export default class Pathfinder implements PathfinderInterface {
     /** Board height and width. */
@@ -37,7 +37,7 @@ export default class Pathfinder implements PathfinderInterface {
         // debug flag
         this.debugMode = false;
 
-        // offset which will be search around selected
+        // offset which will be searched around selected
         this.searchOffsetArr = [
             {
                 x: 0,
@@ -90,9 +90,9 @@ export default class Pathfinder implements PathfinderInterface {
     }
 
     /**
-     * Find shortest path between two points marked as start and finish.
+     * Find the shortest path between two points marked as start and finish.
      * @param board - board array.
-     * @return shortestPath - array with shortest path.
+     * @return shortestPath - array with the shortest path.
      */
     @measurePerformance('pathfinding')
     findPath(board: BoardMap): Array<Coordinates> {
@@ -182,10 +182,10 @@ export default class Pathfinder implements PathfinderInterface {
     }
 
     /**
-     * Search shortest path from finish to start.
+     * Search for the shortest path from finish to start.
      * @private
      * @param boardProcess - boardProcess array.
-     * @return shortestPath - array with shortest path.
+     * @return shortestPath - array with the shortest path.
      */
     private reverseSearch(boardProcess: BoardProcess): Array<Coordinates> {
         let pathArr: Array<Coordinates> = [this.finish];
@@ -194,7 +194,7 @@ export default class Pathfinder implements PathfinderInterface {
         if (this.checkIfEndPointsAreNeighbors(boardProcess))
             return pathArr;
 
-        // search shortest path
+        // search for the shortest path
         let lastTile: BoardProcessTile = this.finish;
         let pathCreated = false;
 

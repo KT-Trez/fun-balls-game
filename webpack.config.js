@@ -37,13 +37,13 @@ module.exports = {
     output: {
         clean: true,
         hashFunction: "sha256",
-        path: path.join(__dirname, './build'),
+        path: path.join(__dirname, './dist'),
         filename: '[name].bundle.js'
     },
     plugins: [
         new HtmlWebpackPlugin({
             filename: 'index.html',
-            title: 'The Great Balls Game',
+            title: 'Orbs Game',
             template: path.join(__dirname, './src/index.html')
         }),
         new MiniCssExtractPlugin({

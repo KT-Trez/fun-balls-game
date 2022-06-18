@@ -3,7 +3,7 @@
     "name": "Bartlomiej 'Trez' Was",
     "email": "batoko.was@10g.pl"
   },
-  "description": "Fun and interactive - The Great Balls Game.",
+  "description": "Simple game about matching orbs by patterns and color.",
   "devDependencies": {
     "css-loader": "^6.4.0",
     "html-webpack-plugin": "^5.4.0",
@@ -16,7 +16,7 @@
     "webpack-dev-server": "^4.3.1"
   },
   "license": "MIT",
-  "name": "the-great-balls-game",
+  "name": "orbs-game",
   "scripts": {
     "dev": "webpack --mode development --watch",
     "docs": "typedoc",
