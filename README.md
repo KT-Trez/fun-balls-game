@@ -30,4 +30,4 @@ const GameData = {
 - `npm run dev` - compiles typescript files in development mode and watches for changes
 - `npm run docs` - creates documentation from JSDoc
 - `npm run prod` - compiles typescript files in production mode
-- `serve` - runs a Webpack development server
+- `npm run serve` - runs a Webpack development server
